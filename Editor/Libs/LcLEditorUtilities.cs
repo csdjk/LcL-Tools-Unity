@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Microsoft.Win32;
 using UnityEditor;
 using UnityEngine;
@@ -8,6 +9,54 @@ namespace LcLTools
 {
     public class LcLEditorUtilities
     {
+        /// <summary>
+        /// 获取所有runtime的目录
+        /// </summary>
+        /// <returns></returns>
+        public static List<string> GetAllRuntimeDirects()
+        {
+            //搜索所有资源
+            var root = Application.dataPath;
+            //获取根路径所有runtime
+            var directories = Directory.GetDirectories(root, "*", SearchOption.TopDirectoryOnly).ToList();
+
+            //ret
+            List<string> retList = new List<string>();
+            foreach (var dirt in directories)
+            {
+                //
+                var _dirt = dirt + "/Runtime";
+                if (Directory.Exists(_dirt))
+                {
+                    _dirt = _dirt.Replace("\\", "/").Replace(Application.dataPath, "Assets");
+                    retList.Add(_dirt);
+                }
+            }
+
+            return retList;
+        }
+        /// <summary>
+        /// 资产转GUID
+        /// </summary>
+        /// <param name="assetPath"></param>
+        /// <returns></returns>
+        static public string AssetPathToGUID(string assetPath)
+        {
+            if (assetPath.EndsWith("/"))
+            {
+                assetPath = assetPath.Remove(assetPath.Length - 1, 1);
+            }
+
+            if (File.Exists(assetPath) || Directory.Exists(assetPath))
+            {
+                return AssetDatabase.AssetPathToGUID(assetPath);
+            }
+
+            Debug.LogError("资产不存在:" + assetPath);
+
+            return null;
+        }
+
         // 保存RenderTexture
         public static void SaveRenderTextureToTexture(RenderTexture rt, string path)
         {

@@ -51,6 +51,7 @@ namespace LcLTools
         //---------------------------GUI-------------------------------------
         public LodLevel lodLevel = LodLevel.LOD300;
 
+        public PostProcess postProcess;
 
         public List<SceneData> sceneList;
         public GameObject[] singleList;
@@ -92,7 +93,25 @@ namespace LcLTools
             GraphicsSettings.useScriptableRenderPipelineBatching = !GraphicsSettings.useScriptableRenderPipelineBatching;
         }
 
-       
+        private bool featureActive;
+        public void PostProcessSwitch()
+        {
+            featureActive = !featureActive;
+            postProcess.postAsset.GetEffect<BloomEffect>().SetActive(featureActive);
+        }
+
+        private bool postActive;
+        public void PostSwitch()
+        {
+            if (gameObject.TryGetComponent(out UniversalAdditionalCameraData camData))
+            {
+                camData.renderPostProcessing = !camData.renderPostProcessing;
+                postActive = camData.renderPostProcessing;
+            }
+
+            postProcess.FinalFeature.SetActive(!postActive);
+        }
+
         private bool bloomFeatureActive;
         public string GetBloomFeatureState()
         {
@@ -340,37 +359,37 @@ namespace LcLTools
         }
 
         // ================================ Button Function ================================
-        // public bool EnableBlur()
-        // {
-        //     var active = postProcess.GetEffectActive<BlurEffect>();
-        //     postProcess.SetEffectActive<BlurEffect>(!active);
-        //     return !active;
-        // }
-        // public bool EnableBloom()
-        // {
-        //     var active = postProcess.GetEffectActive<BloomEffect>();
-        //     postProcess.SetEffectActive<BloomEffect>(!active);
-        //     return !active;
-        // }
-        // public bool EnableDof()
-        // {
-        //     var active = postProcess.GetEffectActive<DepthOfFieldEffect>();
-        //     postProcess.SetEffectActive<DepthOfFieldEffect>(!active);
-        //     return !active;
-        // }
-        // public bool EnableLensFlare()
-        // {
-        //     var active = postProcess.GetEffectActive<LensFlareEffect>();
-        //     postProcess.SetEffectActive<LensFlareEffect>(!active);
-        //     return !active;
-        // }
+        public bool EnableBlur()
+        {
+            var active = postProcess.GetEffectActive<BlurEffect>();
+            postProcess.SetEffectActive<BlurEffect>(!active);
+            return !active;
+        }
+        public bool EnableBloom()
+        {
+            var active = postProcess.GetEffectActive<BloomEffect>();
+            postProcess.SetEffectActive<BloomEffect>(!active);
+            return !active;
+        }
+        public bool EnableDof()
+        {
+            var active = postProcess.GetEffectActive<DepthOfFieldEffect>();
+            postProcess.SetEffectActive<DepthOfFieldEffect>(!active);
+            return !active;
+        }
+        public bool EnableLensFlare()
+        {
+            var active = postProcess.GetEffectActive<LensFlareEffect>();
+            postProcess.SetEffectActive<LensFlareEffect>(!active);
+            return !active;
+        }
 
-        // public bool EnableVolumetricLight()
-        // {
-        //     var active = postProcess.GetEffectActive<VolumetricLightEffect>();
-        //     postProcess.SetEffectActive<VolumetricLightEffect>(!active);
-        //     return !active;
-        // }
+        public bool EnableVolumetricLight()
+        {
+            var active = postProcess.GetEffectActive<VolumetricLightEffect>();
+            postProcess.SetEffectActive<VolumetricLightEffect>(!active);
+            return !active;
+        }
 
 
         // public bool EnableLoop()

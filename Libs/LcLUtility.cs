@@ -64,23 +64,11 @@ namespace LcLTools
         }
 
 
-        // 保存RenderTexture
-        public static void SaveRenderTextureToTexture(RenderTexture rt, string path)
-        {
-            RenderTexture.active = rt;
-            Texture2D tex = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
-            tex.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
-            RenderTexture.active = null;
-
-            byte[] bytes;
-            bytes = tex.EncodeToPNG();
-
-            System.IO.File.WriteAllBytes(path, bytes);
-            AssetDatabase.ImportAsset(path);
-            Debug.Log("Saved to " + path);
-        }
-
-        // 绝对路径转Unity工程相对路径
+        /// <summary>
+        /// 绝对路径转Unity工程相对路径
+        /// </summary>
+        /// <param name="absolutePath"></param>
+        /// <returns></returns>
         public static string AssetsRelativePath(string absolutePath)
         {
 
@@ -96,7 +84,7 @@ namespace LcLTools
                     return "Assets" + absolutePath.Substring(Application.dataPath.Length);
                 }
                 Debug.LogWarning("Full path does not contain the current project's Assets folder");
-                return null;
+                return absolutePath;
             }
         }
         /// <summary>
