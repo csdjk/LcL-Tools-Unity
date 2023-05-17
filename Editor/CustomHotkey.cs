@@ -9,6 +9,7 @@ using System;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace LcLTools
 {
@@ -36,6 +37,7 @@ namespace LcLTools
         /// </summary>
         static double clickTime;
         static double doubleClickTime = 0.3;
+        static List<Renderer> renders = new List<Renderer>();
         [MenuItem("LcLTools/HotKeys/定位到Shader &s")]
         static void QuickPositioningShader()
         {
@@ -44,19 +46,11 @@ namespace LcLTools
             var go = selectObject as GameObject;
             if (go)
             {
-                Material mat;
-                var meshRender = go.GetComponent<MeshRenderer>();
-                if (meshRender)
-                {
-                    mat = meshRender.sharedMaterial;
-                }
-                else
-                {
-                    var skinRender = go.GetComponent<SkinnedMeshRenderer>();
-                    if (skinRender == null) return;
-                    mat = skinRender.sharedMaterial;
-                }
+                renders.Clear();
+                go.GetComponentsInChildren<Renderer>(renders);
+                if (renders.Count == 0) return;
 
+                var mat = renders[0].sharedMaterial;
                 if (mat == null) return;
                 // 双击选中shader
                 if ((EditorApplication.timeSinceStartup - clickTime) < doubleClickTime)
