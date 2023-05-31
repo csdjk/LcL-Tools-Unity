@@ -93,6 +93,16 @@ namespace LcLTools
             }
         }
 
+
+        // 定位到当前使用的RenderAssets 
+        [MenuItem("LcLTools/HotKeys/定位到RenderAssets &r")]
+        static void QuickPositioningRenderAssets()
+        {
+            var pipelineAsset = QualitySettings.GetRenderPipelineAssetAt(QualitySettings.GetQualityLevel());
+            EditorGUIUtility.PingObject(pipelineAsset);
+        }
+
+
         [MenuItem("LcLTools/HotKeys/Project Settings &1")]
         static void OpenProjectSettings()
         {

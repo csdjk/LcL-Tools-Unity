@@ -3,9 +3,11 @@ using System.Collections;
 
 namespace LcLTools
 {
-    [AddComponentMenu("LcLTools/CameraController", 0)]
-    public class CameraController : MonoBehaviour
+    [AddComponentMenu("LcLTools/PlayerController", 0)]
+    public class PlayerController : MonoBehaviour
     {
+        public enum PlayerControlMode { FirstPerson, ThirdPerson }
+
         /*
         Writen by Windexglow 11-13-10. Use it, edit it, steal it I don't care.
         Converted to C# 27-02-13 - no credit wanted.
@@ -14,6 +16,7 @@ namespace LcLTools
         wasd : basic movement
         shift : Makes camera accelerate
         space : Moves camera on X and Z axis only. So camera doesn't gain any height*/
+        public PlayerControlMode controlMode = PlayerControlMode.FirstPerson;
         public float mainSpeed = 10.0f; //regular speed
         public float shiftAdd = 10.0f; //multiplied by how long shift is held. Basically running
         float maxShift = 1000.0f; //Maximum speed when holdin gshift
@@ -25,7 +28,10 @@ namespace LcLTools
 
         void Update()
         {
-            RotationCamera();
+            if (controlMode == PlayerControlMode.FirstPerson)
+            {
+                RotationCamera();
+            }
             Translate();
         }
 
@@ -93,7 +99,7 @@ namespace LcLTools
 
                 velocity = velocity * Time.deltaTime;
                 Vector3 newPosition = transform.position;
-                if (Input.GetKey(KeyCode.Space))
+                if (Input.GetKey(KeyCode.Space) && controlMode == PlayerControlMode.FirstPerson)
                 {
                     // 只在X轴和Z轴上移动
                     transform.Translate(velocity);
@@ -107,6 +113,9 @@ namespace LcLTools
                 }
             }
         }
+        Vector2 startPos;
+        Vector2 dir;
+
         private Vector3 GetBaseInput()
         {
             Vector3 p_Velocity = new Vector3();
@@ -119,16 +128,34 @@ namespace LcLTools
                 for (int i = 0; i < Input.touchCount; i++)
                 {
                     touch = Input.GetTouch(i);
-                    if (touch.phase == TouchPhase.Moved && touch.position.x < Screen.width / 2)
+                    var isLeft = touch.position.x < Screen.width / 2;
+                    if (touch.phase == TouchPhase.Began && isLeft)
                     {
-                        touch = Input.GetTouch(i);
+                        startPos = touch.position;
+                        break;
+                    }else if (touch.phase == TouchPhase.Moved && isLeft)
+                    {
+                        dir = (touch.position - startPos).normalized;
                         isMatching = true;
+                        break;
+                    }else if (touch.phase == TouchPhase.Stationary && isLeft)
+                    {
+                        dir = (touch.position - startPos).normalized;
+                        isMatching = true;
+                        break;
+                    }else if (touch.phase == TouchPhase.Ended && isLeft)
+                    {
+                        isMatching = false;
                         break;
                     }
                 }
+
                 if (!isMatching) return p_Velocity;
                 Vector2 touchDeltaPosition = touch.deltaPosition;
-                p_Velocity += new Vector3(touchDeltaPosition.x, 0, touchDeltaPosition.y).normalized;
+                // p_Velocity += new Vector3(touchDeltaPosition.x, 0, touchDeltaPosition.y).normalized;
+                p_Velocity += new Vector3(dir.x, 0, dir.y);
+
+
             }
             else
             {
