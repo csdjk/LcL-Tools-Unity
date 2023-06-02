@@ -10,6 +10,7 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine.Rendering;
 
 namespace LcLTools
 {
@@ -86,8 +87,19 @@ namespace LcLTools
                 }
                 else
                 {
-                    Material material = new Material(Shader.Find("Standard"));
-                    path = Path.GetDirectoryName(path) + "/newMaterial.mat";
+                    Material material;
+                    // 判断是否URP
+                    if (GraphicsSettings.renderPipelineAsset != null && GraphicsSettings.renderPipelineAsset.GetType().Name == "UniversalRenderPipelineAsset")
+                        material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                    else
+                        material = new Material(Shader.Find("Standard"));
+                        
+                    if (!AssetDatabase.IsValidFolder(path))
+                    {
+                        path = Path.GetDirectoryName(path);
+                    }
+                    path = Path.Combine(path, "Material.mat");
+                    path = AssetDatabase.GenerateUniqueAssetPath(path);
                     AssetDatabase.CreateAsset(material, path);
                 }
             }

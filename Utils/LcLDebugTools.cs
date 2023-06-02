@@ -9,7 +9,8 @@ using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using UnityEngine.Experimental.Rendering;
 using System.Reflection;
-
+using FogOfWar;
+using Object = UnityEngine.Object;
 
 namespace LcLTools
 {
@@ -27,7 +28,8 @@ namespace LcLTools
         public string name;
         public string action;
         public bool buttonState;
-        public string data;
+        [SerializeReference]
+        public List<object> paramList = new List<object>();
     }
     [Serializable]
     public struct SceneData
@@ -49,6 +51,7 @@ namespace LcLTools
         public int fontSize = 25;
         private Rect uiBoxRect = new Rect(0, 0, 0, 0);
         //---------------------------GUI-------------------------------------
+        public bool showLOD = true;
         public LodLevel lodLevel = LodLevel.LOD300;
 
         public PostProcess postProcess;
@@ -60,6 +63,8 @@ namespace LcLTools
         [Header("按钮列表")]
         [SerializeField, HideInInspector]
         private List<ButtonData> buttonDataList;
+        [SerializeField, HideInInspector]
+
 
         private GUIStyle enableStyle;
         private GUIStyle disableStyle;
@@ -190,6 +195,23 @@ namespace LcLTools
             return GraphicsSettings.useScriptableRenderPipelineBatching ? "SRP(ing...)" : "SRP";
         }
 
+        [SerializeField] private int highIterations = 10000000;
+        [SerializeField] private bool highConsumption = true;
+
+        private void Update()
+        {
+            if (highConsumption)
+            {
+                for (int i = 0; i < highIterations; i++)
+                {
+                    float result = Mathf.Sqrt(i);
+                    result *= Mathf.Sin(result);
+                    result /= Mathf.Cos(result);
+                    result += Mathf.Tan(result);
+                }
+            }
+        }
+
         void OnValidate()
         {
             Shader.globalMaximumLOD = (int)lodLevel;
@@ -206,8 +228,7 @@ namespace LcLTools
             if (isInit)
             {
                 isInit = false;
-                uiBoxRect.x = Screen.width - uiBoxSize.x;
-                uiBoxRect.y = Screen.height - uiBoxSize.y;
+
                 enableStyle = new GUIStyle(GUI.skin.button);
                 disableStyle = new GUIStyle(GUI.skin.button);
                 enableStyle.normal.textColor = Color.green;
@@ -216,7 +237,8 @@ namespace LcLTools
                 disableStyle.normal.textColor = Color.white;
                 disableStyle.fontSize = fontSize;
             }
-
+            uiBoxRect.x = Screen.width - uiBoxSize.x;
+            uiBoxRect.y = Screen.height - uiBoxSize.y;
             uiBoxRect = GUI.Window(windowID, uiBoxRect, WindowCallBack, "");
             uiBoxRect.width = uiBoxSize.x;
             uiBoxRect.height = uiBoxSize.y;
@@ -228,6 +250,20 @@ namespace LcLTools
             GUI.skin.label.fontSize = fontSize;
             GUI.skin.label.alignment = TextAnchor.MiddleCenter;
             GUI.backgroundColor = new Color(0, 0, 0, 0.5f);
+            GUILayout.Label($"ReversedZ: {SystemInfo.usesReversedZBuffer}", GetStyle(SystemInfo.usesReversedZBuffer));
+
+            if (highConsumption)
+            {
+                GUILayout.BeginHorizontal();
+                {
+                    // int field
+                    GUILayout.Label("运算次数: ", GUILayout.Width(50));
+                    highIterations = int.Parse(GUILayout.TextField(highIterations.ToString(), GUILayout.Width(50)));
+                    // highIterations = (int)GUILayout.HorizontalSlider(highIterations, 0, 500000, GUILayout.Height(30));
+                    // GUILayout.Label($"运算次数: {highIterations}", GetStyle(highConsumption));
+                }
+                GUILayout.EndHorizontal();
+            }
 
             GUILayout.BeginHorizontal();
             {
@@ -312,25 +348,21 @@ namespace LcLTools
                     GUILayout.EndVertical();
                 }
 
-
-                GUILayout.BeginVertical();
+                if (showLOD)
                 {
-                    GUILayout.Label($"ReversedZ: {SystemInfo.usesReversedZBuffer}", GetStyle(SystemInfo.usesReversedZBuffer));
-                    GUILayout.Space(10);
-                    foreach (LodLevel lod in Enum.GetValues(typeof(LodLevel)))
+                    GUILayout.BeginVertical();
                     {
-                        if (Button(lod.ToString(), Shader.globalMaximumLOD == (int)lod))
+                        GUILayout.Space(10);
+                        foreach (LodLevel lod in Enum.GetValues(typeof(LodLevel)))
                         {
-                            Shader.globalMaximumLOD = (int)lod;
+                            if (Button(lod.ToString(), Shader.globalMaximumLOD == (int)lod))
+                            {
+                                Shader.globalMaximumLOD = (int)lod;
+                            }
                         }
                     }
-                    if (Button(GetSRPState()))
-                    {
-                        SRPSwitch();
-                    }
-
+                    GUILayout.EndVertical();
                 }
-                GUILayout.EndVertical();
             }
             GUILayout.EndHorizontal();
 
@@ -344,13 +376,7 @@ namespace LcLTools
             if (method != null)
             {
                 object res;
-                // 判断方法名是否等于 SwitchKeyword ,如果是就传递参数调用
-                if (item.action == "SwitchKeyword")
-                {
-                    res = method.Invoke(this, new object[] { item.data });
-                    return (bool)res;
-                }
-                res = method.Invoke(this, null);
+                res = method.Invoke(this, item.paramList.ToArray());
                 if (res != null)
                     return (bool)res;
             }
@@ -391,12 +417,17 @@ namespace LcLTools
             return !active;
         }
 
-
-        // public bool EnableLoop()
-        // {
-        //     var active = postProcess.GetEffectSettings<VolumetricLightEffect>() as VolumetricLightEffect.Setting;
-        //     active.loop = !active.loop;
-        //     return active.loop;
-        // }
+        public bool EnableFogWar()
+        {
+            FowManager.Instance.active = !FowManager.Instance.active;
+            RenderPipelineManager.GetRendererFeatures<FogOfWarFeature>(RenderPipelineManager.DefaultRendererData).SetActive(FowManager.Instance.active);
+            return FowManager.Instance.active;
+        }
+       
+        public bool SetTest(string name, int aa)
+        {
+            Debug.Log($"Ghost {name} {aa}");
+            return true;
+        }
     }
 }

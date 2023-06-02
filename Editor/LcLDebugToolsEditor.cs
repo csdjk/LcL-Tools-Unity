@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System;
 using System.Linq;
 using System.IO;
+using Object = System.Object;
 
 namespace LcLTools
 {
@@ -13,31 +14,36 @@ namespace LcLTools
     {
         public List<string> buttonEventList = new List<string>();
         // 创建一个字典，用来存储方法名和参数列表
-        public Dictionary<string, List<string>> buttonEventParams = new Dictionary<string, List<string>>();
+        public Dictionary<string, List<ParameterInfo>> buttonEventParams = new Dictionary<string, List<ParameterInfo>>();
         public string[] sceneList;
 
         private SerializedProperty uiBoxSizeProp;
         private SerializedProperty buttonHeightProp;
         private SerializedProperty fontSizeProp;
         private SerializedProperty lodLevelProp;
+        private SerializedProperty showLODProp;
         private SerializedProperty postProcessProp;
         private SerializedProperty sceneListProp;
         private SerializedProperty singleListProp;
         private SerializedProperty toggleListProp;
         private SerializedProperty buttonDataListProp;
-
-
+        private SerializedProperty highConsumptionProp;
+        private SerializedProperty highIterationsProp;
+        
         private void OnEnable()
         {
             uiBoxSizeProp = serializedObject.FindProperty("uiBoxSize");
             buttonHeightProp = serializedObject.FindProperty("buttonHeight");
             fontSizeProp = serializedObject.FindProperty("fontSize");
             lodLevelProp = serializedObject.FindProperty("lodLevel");
+            showLODProp = serializedObject.FindProperty("showLOD");
             postProcessProp = serializedObject.FindProperty("postProcess");
             sceneListProp = serializedObject.FindProperty("sceneList");
             singleListProp = serializedObject.FindProperty("singleList");
             toggleListProp = serializedObject.FindProperty("toggleList");
             buttonDataListProp = serializedObject.FindProperty("buttonDataList");
+            highConsumptionProp = serializedObject.FindProperty("highConsumption");
+            highIterationsProp = serializedObject.FindProperty("highIterations");
         }
 
         public override void OnInspectorGUI()
@@ -46,7 +52,11 @@ namespace LcLTools
             UpdateFunctionList();
             UpdateSceneList();
             serializedObject.Update();
-
+            EditorGUILayout.BeginHorizontal();
+            {
+                EditorGUILayout.PropertyField(highConsumptionProp);
+                EditorGUILayout.PropertyField(highIterationsProp);
+            }
             EditorGUILayout.BeginVertical("U2D.createRect");
             {
                 EditorGUILayout.PropertyField(uiBoxSizeProp);
@@ -56,7 +66,13 @@ namespace LcLTools
             }
             EditorGUILayout.EndVertical();
 
-            EditorGUILayout.PropertyField(lodLevelProp);
+            EditorGUILayout.BeginHorizontal();
+            {
+                showLODProp.boolValue = EditorGUILayout.Toggle(showLODProp.boolValue);
+                lodLevelProp.enumValueIndex = EditorGUILayout.Popup(lodLevelProp.enumValueIndex, lodLevelProp.enumDisplayNames);
+            }
+            EditorGUILayout.EndHorizontal();
+
             EditorGUILayout.PropertyField(postProcessProp);
             EditorGUILayout.PropertyField(singleListProp, new GUIContent("单选切换："), true);
             EditorGUILayout.PropertyField(toggleListProp, new GUIContent("多选切换："), true);
@@ -121,6 +137,7 @@ namespace LcLTools
         }
 
         private bool showButtonDataList = true;
+        private int selectedIndex = 0;
 
         // Draw button DataListProp
         private void DrawButtonDataList()
@@ -131,6 +148,8 @@ namespace LcLTools
                 EditorGUILayout.BeginVertical("box");
                 {
                     var eventArray = buttonEventList.ToArray();
+                    // var paramsArray = buttonEventParams.ToArray();
+
                     for (int i = 0; i < buttonDataListProp.arraySize; i++)
                     {
                         SerializedProperty buttonData = buttonDataListProp.GetArrayElementAtIndex(i);
@@ -144,14 +163,39 @@ namespace LcLTools
                             active.boolValue = EditorGUILayout.Toggle(active.boolValue, GUILayout.Width(20));
                             EditorGUILayout.PropertyField(name, GUIContent.none);
 
-
-                            if (action.stringValue == "SwitchKeyword")
+                            // 绘制参数列表
+                            SerializedProperty paramListProperty = buttonData.FindPropertyRelative("paramList");
+                            if (buttonEventParams.TryGetValue(action.stringValue, out var paramList))
                             {
-                                SerializedProperty data = buttonData.FindPropertyRelative("data");
-                                data.stringValue = EditorGUILayout.TextField(data.stringValue);
-                            }
+                                paramListProperty.arraySize = paramList.Count;
 
-                            int selectedIndex = EditorGUILayout.Popup(Array.IndexOf(eventArray, action.stringValue), eventArray);
+                                for (int j = 0; j < paramList.Count; j++)
+                                {
+                                    var paramData = paramList[j];
+                                    var param = paramListProperty.GetArrayElementAtIndex(j);
+                                    var value = param.GetValue();
+                                    if (paramData.ParameterType == typeof(string))
+                                    {
+                                        value = EditorGUILayout.TextField(value != null ? value.ToString() : paramData.Name);
+                                    }
+                                    else if (paramData.ParameterType == typeof(int))
+                                    {
+                                        value = EditorGUILayout.IntField(value != null ? (int)value : 0);
+                                    }
+                                    else if (paramData.ParameterType == typeof(float))
+                                    {
+                                        value = EditorGUILayout.FloatField(value != null ? (float)value : 0);
+                                    }
+                                    else if (paramData.ParameterType.IsSubclassOf(typeof(MonoBehaviour)) || paramData.ParameterType.IsSubclassOf(typeof(ScriptableObject)))
+                                    {
+                                        var type = paramData.GetType();
+                                        value = EditorGUILayout.ObjectField(value != null ? (UnityEngine.Object)value : null, paramData.ParameterType, true);
+                                    }
+                                    param.SetValue(value);
+                                }
+                            }
+                            // 绘制方法列表
+                            selectedIndex = EditorGUILayout.Popup(Array.IndexOf(eventArray, action.stringValue), eventArray);
                             if (selectedIndex == -1) selectedIndex = 0;
                             action.stringValue = eventArray[selectedIndex];
 
@@ -198,13 +242,13 @@ namespace LcLTools
             }
         }
 
-        private List<string> GetMethodParameters(MethodInfo method)
+        private List<ParameterInfo> GetMethodParameters(MethodInfo method)
         {
             var parameters = method.GetParameters();
-            var param = new List<string>();
+            var param = new List<ParameterInfo>();
             for (int i = 0; i < parameters.Length; i++)
             {
-                param.Add(parameters[i].Name);
+                param.Add(parameters[i]);
             }
             return param;
         }
@@ -217,40 +261,5 @@ namespace LcLTools
                           .Select(scene => Path.GetFileNameWithoutExtension(scene.path))
                           .ToArray();
         }
-
-
-        //         public Renderer actorRender;
-        //         public Texture2D mainTexture;
-        //         public Texture2D texture1;
-        //         public float posX = 0f;
-        //         public float posY = 0f;
-        //         public void MergeTexture()
-        //         {
-        // #if UNITY_EDITOR
-        //             var path = "Assets/LiChangLong/Texture/CombineTexture.png";
-
-        //             var rt = new RenderTexture(mainTexture.width, mainTexture.width, 32);
-        //             RenderTexture.active = rt;
-        //             Graphics.Blit(mainTexture, rt);
-        //             GL.PushMatrix();
-        //             GL.LoadPixelMatrix(0, mainTexture.width, mainTexture.width, 0);
-        //             Graphics.DrawTexture(new Rect(posX, posY, texture1.width, texture1.height), texture1);
-
-        //             Texture2D png = new Texture2D(rt.width, rt.height, TextureFormat.ARGB32, false);
-        //             png.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
-
-
-        //             png.Apply();
-        //             System.IO.File.WriteAllBytes(path, png.EncodeToPNG());
-        //             AssetDatabase.ImportAsset(path);
-        //             GL.PopMatrix();
-        //             RenderTexture.active = null;
-
-        //             // DestroyImmediate(png);
-        //             png = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-        //             actorRender.sharedMaterial.mainTexture = png;
-        // #endif
-        //         }
-
     }
 }
