@@ -14,7 +14,7 @@ namespace LcLTools
 {
     public class SkyListWindow : EditorWindow
     {
-        static string path = "Assets/SkyBox";
+        static string path = "Assets";
         static Toggle toggle;
         static float toggleHeight = 30;
         static Texture sceneIcon;

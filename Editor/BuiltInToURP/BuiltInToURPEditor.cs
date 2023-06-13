@@ -13,7 +13,31 @@ namespace LcLTools
 {
     public class BuiltInToURPEditor : EditorWindow
     {
-        static string stylePath = "Assets/LiChangLong/LcLTools/Editor/BuiltInToURP/BuiltInToURPEditor.uss";
+        public static string RootPath
+        {
+            get
+            {
+                var g = AssetDatabase.FindAssets($"t:Script {nameof(BuiltInToURPEditor)}");
+                return AssetDatabase.GUIDToAssetPath(g[0]);
+            }
+        }
+
+        public static string stylePath
+        {
+            get
+            {
+                var guids = AssetDatabase.FindAssets($"BuiltInToURPEditor");
+                foreach (var guid in guids)
+                {
+                    var path = AssetDatabase.GUIDToAssetPath(guid);
+                    if (Path.GetExtension(path) == ".uss")
+                    {
+                        return path;
+                    }
+                }
+                return "";
+            }
+        }
 
         static List<GameObject> prefabList = new List<GameObject>();
         static ObjectField parentField;

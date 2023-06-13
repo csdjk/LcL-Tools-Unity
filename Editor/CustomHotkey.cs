@@ -9,6 +9,8 @@ using System;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
+using System.Collections.Generic;
+using UnityEngine.Rendering;
 
 namespace LcLTools
 {
@@ -36,6 +38,7 @@ namespace LcLTools
         /// </summary>
         static double clickTime;
         static double doubleClickTime = 0.3;
+        static List<Renderer> renders = new List<Renderer>();
         [MenuItem("LcLTools/HotKeys/定位到Shader &s")]
         static void QuickPositioningShader()
         {
@@ -44,19 +47,11 @@ namespace LcLTools
             var go = selectObject as GameObject;
             if (go)
             {
-                Material mat;
-                var meshRender = go.GetComponent<MeshRenderer>();
-                if (meshRender)
-                {
-                    mat = meshRender.sharedMaterial;
-                }
-                else
-                {
-                    var skinRender = go.GetComponent<SkinnedMeshRenderer>();
-                    if (skinRender == null) return;
-                    mat = skinRender.sharedMaterial;
-                }
+                renders.Clear();
+                go.GetComponentsInChildren<Renderer>(renders);
+                if (renders.Count == 0) return;
 
+                var mat = renders[0].sharedMaterial;
                 if (mat == null) return;
                 // 双击选中shader
                 if ((EditorApplication.timeSinceStartup - clickTime) < doubleClickTime)
@@ -92,12 +87,33 @@ namespace LcLTools
                 }
                 else
                 {
-                    Material material = new Material(Shader.Find("Standard"));
-                    path = Path.GetDirectoryName(path) + "/newMaterial.mat";
+                    Material material;
+                    // 判断是否URP
+                    if (GraphicsSettings.renderPipelineAsset != null && GraphicsSettings.renderPipelineAsset.GetType().Name == "UniversalRenderPipelineAsset")
+                        material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                    else
+                        material = new Material(Shader.Find("Standard"));
+                        
+                    if (!AssetDatabase.IsValidFolder(path))
+                    {
+                        path = Path.GetDirectoryName(path);
+                    }
+                    path = Path.Combine(path, "Material.mat");
+                    path = AssetDatabase.GenerateUniqueAssetPath(path);
                     AssetDatabase.CreateAsset(material, path);
                 }
             }
         }
+
+
+        // 定位到当前使用的RenderAssets 
+        [MenuItem("LcLTools/HotKeys/定位到RenderAssets &r")]
+        static void QuickPositioningRenderAssets()
+        {
+            var pipelineAsset = QualitySettings.GetRenderPipelineAssetAt(QualitySettings.GetQualityLevel());
+            EditorGUIUtility.PingObject(pipelineAsset);
+        }
+
 
         [MenuItem("LcLTools/HotKeys/Project Settings &1")]
         static void OpenProjectSettings()

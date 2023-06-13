@@ -161,11 +161,6 @@ namespace LcLTools
                 {
                     if (Path.GetExtension(dp).Equals(".mat", StringComparison.OrdinalIgnoreCase))
                     {
-                        // if (dp.Contains("Packages"))
-                        // {
-                        //     Debug.Log("跳过path " + path);
-                        //     Debug.Log("跳过dp " + dp);
-                        // }
                         allMatPaths.Add(dp);
                     }
                     else if (Path.GetExtension(dp).Equals(".asset", StringComparison.OrdinalIgnoreCase)) //依赖的ScripttableObject,会
