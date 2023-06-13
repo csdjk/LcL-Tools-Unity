@@ -12,24 +12,9 @@ namespace LcLTools
     public class FileSyncTools : Editor
     {
         public static string effectProjectPath = "F:\\UnityProjects\\Work\\APPEffectProject";
+        public static string sceneProjectPath = "F:\\UnityProjects\\Work\\APPSceneProjectURP";
         public static string clientProjectPath = "F:\\UnityProjects\\Work\\APPGameUnity";
-
-        public static List<string> excludeFiles = new List<string>(){
-        "DodAssetProcessor"
-    };
-
-        // [MenuItem("Assets/LcL Sync Files/To LcLTools", false, 1)]
-        // private static void SyncLcLToolsFiles()
-        // {
-        //     if (!Tips(effectProjectPath))
-        //     {
-        //         return;
-        //     }
-        //     ForeachSelectObjs((obj) =>
-        //     {
-        //         SyncFiles(obj, effectProjectPath);
-        //     });
-        // }
+        public static List<string> excludeFiles = new List<string>() { "DodAssetProcessor" };
 
 
         [MenuItem("Assets/LcL Sync Files/To Effect Project", false, 1)]
@@ -56,6 +41,19 @@ namespace LcLTools
             ForeachSelectObjs((obj) =>
             {
                 SyncFiles(obj, clientProjectPath);
+            });
+        }
+
+        [MenuItem("Assets/LcL Sync Files/To Scene Project", false, 1)]
+        private static void SyncFilesToScene()
+        {
+            if (!Tips(sceneProjectPath))
+            {
+                return;
+            }
+            ForeachSelectObjs((obj) =>
+            {
+                SyncFiles(obj, sceneProjectPath);
             });
         }
 

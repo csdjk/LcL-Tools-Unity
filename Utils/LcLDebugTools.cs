@@ -9,7 +9,10 @@ using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using UnityEngine.Experimental.Rendering;
 using System.Reflection;
-
+using FogOfWar;
+using Object = UnityEngine.Object;
+using SocialApp;
+using UnityEngine.Profiling;
 
 namespace LcLTools
 {
@@ -27,7 +30,8 @@ namespace LcLTools
         public string name;
         public string action;
         public bool buttonState;
-        public string data;
+        [SerializeReference]
+        public List<object> paramList = new List<object>();
     }
     [Serializable]
     public struct SceneData
@@ -49,6 +53,7 @@ namespace LcLTools
         public int fontSize = 25;
         private Rect uiBoxRect = new Rect(0, 0, 0, 0);
         //---------------------------GUI-------------------------------------
+        public bool showLOD = true;
         public LodLevel lodLevel = LodLevel.LOD300;
 
         public PostProcess postProcess;
@@ -60,10 +65,11 @@ namespace LcLTools
         [Header("按钮列表")]
         [SerializeField, HideInInspector]
         private List<ButtonData> buttonDataList;
+        [SerializeField, HideInInspector]
+
 
         private GUIStyle enableStyle;
         private GUIStyle disableStyle;
-
         private void Awake()
         {
             if (Application.isPlaying)
@@ -190,15 +196,38 @@ namespace LcLTools
             return GraphicsSettings.useScriptableRenderPipelineBatching ? "SRP(ing...)" : "SRP";
         }
 
+        [SerializeField] private int highIterations = 10000000;
+        [SerializeField] private bool highConsumption = true;
+        double count = 0;
+        private void HighConsumption()
+        {
+            if (Application.isPlaying && highConsumption)
+            {
+                Profiler.BeginSample("HighConsumption");
+                for (int i = 0; i < highIterations; i++)
+                {
+                    float result = Mathf.Sqrt(i);
+                    result *= Mathf.Sin(result);
+                    result /= Mathf.Cos(result);
+                    result += Mathf.Tan(result);
+                    count += 0.00005f;
+                }
+                Profiler.BeginSample(name);
+            }
+        }
+
         void OnValidate()
         {
             Shader.globalMaximumLOD = (int)lodLevel;
         }
 
 
+        private int prevScreenWidth;
+        private int prevScreenHeight;
         bool isInit = true;
         void OnGUI()
         {
+            HighConsumption();
             if (uiBoxRect == null)
             {
                 return;
@@ -206,8 +235,7 @@ namespace LcLTools
             if (isInit)
             {
                 isInit = false;
-                uiBoxRect.x = Screen.width - uiBoxSize.x;
-                uiBoxRect.y = Screen.height - uiBoxSize.y;
+
                 enableStyle = new GUIStyle(GUI.skin.button);
                 disableStyle = new GUIStyle(GUI.skin.button);
                 enableStyle.normal.textColor = Color.green;
@@ -215,8 +243,17 @@ namespace LcLTools
                 enableStyle.fontSize = fontSize;
                 disableStyle.normal.textColor = Color.white;
                 disableStyle.fontSize = fontSize;
+                uiBoxRect.x = Screen.width - uiBoxSize.x;
+                uiBoxRect.y = Screen.height - uiBoxSize.y;
             }
-
+            // 判断屏幕分辨率是否发生变化
+            if (prevScreenWidth != Screen.width || prevScreenHeight != Screen.height)
+            {
+                prevScreenWidth = Screen.width;
+                prevScreenHeight = Screen.height;
+                uiBoxRect.x = Screen.width - uiBoxSize.x;
+                uiBoxRect.y = Screen.height - uiBoxSize.y;
+            }
             uiBoxRect = GUI.Window(windowID, uiBoxRect, WindowCallBack, "");
             uiBoxRect.width = uiBoxSize.x;
             uiBoxRect.height = uiBoxSize.y;
@@ -228,6 +265,20 @@ namespace LcLTools
             GUI.skin.label.fontSize = fontSize;
             GUI.skin.label.alignment = TextAnchor.MiddleCenter;
             GUI.backgroundColor = new Color(0, 0, 0, 0.5f);
+            if (highConsumption)
+            {
+                GUILayout.Label($"Count: {count}");
+                GUILayout.BeginHorizontal();
+                {
+                    highIterations = (int)GUILayout.HorizontalSlider(highIterations, 0, 50000000, GUILayout.Height(30));
+                    highIterations = int.Parse(GUILayout.TextField(highIterations.ToString(), enableStyle, GUILayout.Height(30), GUILayout.Width(100)));
+                }
+                GUILayout.EndHorizontal();
+            }
+            // GUILayout.Label($"ReversedZ: {SystemInfo.usesReversedZBuffer}", GetStyle(SystemInfo.usesReversedZBuffer));
+
+
+            GUILayout.Label($"DepthTex: {requiresDepthTexture}", GetStyle(requiresDepthTexture));
 
             GUILayout.BeginHorizontal();
             {
@@ -312,25 +363,21 @@ namespace LcLTools
                     GUILayout.EndVertical();
                 }
 
-
-                GUILayout.BeginVertical();
+                if (showLOD)
                 {
-                    GUILayout.Label($"ReversedZ: {SystemInfo.usesReversedZBuffer}", GetStyle(SystemInfo.usesReversedZBuffer));
-                    GUILayout.Space(10);
-                    foreach (LodLevel lod in Enum.GetValues(typeof(LodLevel)))
+                    GUILayout.BeginVertical();
                     {
-                        if (Button(lod.ToString(), Shader.globalMaximumLOD == (int)lod))
+                        GUILayout.Space(10);
+                        foreach (LodLevel lod in Enum.GetValues(typeof(LodLevel)))
                         {
-                            Shader.globalMaximumLOD = (int)lod;
+                            if (Button(lod.ToString(), Shader.globalMaximumLOD == (int)lod))
+                            {
+                                Shader.globalMaximumLOD = (int)lod;
+                            }
                         }
                     }
-                    if (Button(GetSRPState()))
-                    {
-                        SRPSwitch();
-                    }
-
+                    GUILayout.EndVertical();
                 }
-                GUILayout.EndVertical();
             }
             GUILayout.EndHorizontal();
 
@@ -344,13 +391,7 @@ namespace LcLTools
             if (method != null)
             {
                 object res;
-                // 判断方法名是否等于 SwitchKeyword ,如果是就传递参数调用
-                if (item.action == "SwitchKeyword")
-                {
-                    res = method.Invoke(this, new object[] { item.data });
-                    return (bool)res;
-                }
-                res = method.Invoke(this, null);
+                res = method.Invoke(this, item.paramList.ToArray());
                 if (res != null)
                     return (bool)res;
             }
@@ -391,12 +432,54 @@ namespace LcLTools
             return !active;
         }
 
+        public bool EnableFogWar()
+        {
+            FogOfWarManager.Instance.active = !FogOfWarManager.Instance.active;
+            RenderPipelineManager.GetRendererFeatures<FogOfWarFeature>(RenderPipelineManager.DefaultRendererData).SetActive(FogOfWarManager.Instance.active);
+            return FogOfWarManager.Instance.active;
+        }
 
-        // public bool EnableLoop()
-        // {
-        //     var active = postProcess.GetEffectSettings<VolumetricLightEffect>() as VolumetricLightEffect.Setting;
-        //     active.loop = !active.loop;
-        //     return active.loop;
-        // }
+        public bool Ghost(GameObject ghost)
+        {
+            Debug.Log($"Ghost {ghost.name}");
+            return true;
+        }
+        public bool SetTest(string name, int aa)
+        {
+            Debug.Log($"Ghost {name} {aa}");
+            return true;
+        }
+
+        private bool fogOfWarGridActive = true;
+        private bool requiresDepthTexture = false;
+        public bool EnableFogOfWarGrid()
+        {
+            Camera.main.orthographic = false;
+            fogOfWarGridActive = !fogOfWarGridActive;
+            FogOfWarManager.Instance.active = fogOfWarGridActive;
+            
+            if (fogOfWarGridActive)
+            {
+                var cameraData = Camera.main?.GetComponent<UniversalAdditionalCameraData>();
+                if (cameraData)
+                {
+                    cameraData.requiresDepthTexture = true;
+                    requiresDepthTexture = true;
+                }
+            }
+
+            return fogOfWarGridActive;
+        }
+
+        private bool fogOfWarRayActive = true;
+        public bool EnableFogOfWarRay()
+        {
+            return true;
+            // Camera.main.orthographic = false;
+            // fogOfWarRayActive = !fogOfWarRayActive;
+            // GameEvent.Get<IBattleLogicEvent>().RefreshLightShadow(fogOfWarRayActive);
+            // GameEvent.Get<IBattleLogicEvent>().RefreshLightShadowRadius(7);
+            // return fogOfWarRayActive;
+        }
     }
 }

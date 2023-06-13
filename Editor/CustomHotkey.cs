@@ -17,13 +17,13 @@ namespace LcLTools
     /// </summary>
     public class CustomHotkey
     {
-        [MenuItem("LcLTools/HotKeys/播放 _F3")]
+        [MenuItem("LcLTools/HotKeys/播放 _F11")]
         static void EditorPlayCommand()
         {
             EditorApplication.isPlaying = !EditorApplication.isPlaying;
         }
 
-        [MenuItem("LcLTools/HotKeys/暂停 _F4")]
+        [MenuItem("LcLTools/HotKeys/暂停 _F12")]
         static void EditorPauseCommand()
         {
             EditorApplication.isPaused = !EditorApplication.isPaused;
