@@ -5,13 +5,10 @@ using System.IO;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using UnityEngine.Experimental.Rendering;
 using System.Reflection;
-using FogOfWar;
 using Object = UnityEngine.Object;
-using SocialApp;
 using UnityEngine.Profiling;
 
 namespace LcLTools
@@ -56,7 +53,6 @@ namespace LcLTools
         public bool showLOD = true;
         public LodLevel lodLevel = LodLevel.LOD300;
 
-        public PostProcess postProcess;
 
         public List<SceneData> sceneList;
         public GameObject[] singleList;
@@ -99,32 +95,7 @@ namespace LcLTools
             GraphicsSettings.useScriptableRenderPipelineBatching = !GraphicsSettings.useScriptableRenderPipelineBatching;
         }
 
-        private bool featureActive;
-        public void PostProcessSwitch()
-        {
-            featureActive = !featureActive;
-            postProcess.postAsset.GetEffect<BloomEffect>().SetActive(featureActive);
-        }
-
-        private bool postActive;
-        public void PostSwitch()
-        {
-            if (gameObject.TryGetComponent(out UniversalAdditionalCameraData camData))
-            {
-                camData.renderPostProcessing = !camData.renderPostProcessing;
-                postActive = camData.renderPostProcessing;
-            }
-
-            postProcess.FinalFeature.SetActive(!postActive);
-        }
-
-        private bool bloomFeatureActive;
-        public string GetBloomFeatureState()
-        {
-            return bloomFeatureActive ? "BloomF(ing...)" : "BloomF";
-        }
-
-
+   
         public void GotoScene(int index)
         {
             SceneManager.LoadScene(index);
@@ -277,9 +248,6 @@ namespace LcLTools
             }
             // GUILayout.Label($"ReversedZ: {SystemInfo.usesReversedZBuffer}", GetStyle(SystemInfo.usesReversedZBuffer));
 
-
-            GUILayout.Label($"DepthTex: {requiresDepthTexture}", GetStyle(requiresDepthTexture));
-
             GUILayout.BeginHorizontal();
             {
 
@@ -400,86 +368,5 @@ namespace LcLTools
         }
 
         // ================================ Button Function ================================
-        public bool EnableBlur()
-        {
-            var active = postProcess.GetEffectActive<BlurEffect>();
-            postProcess.SetEffectActive<BlurEffect>(!active);
-            return !active;
-        }
-        public bool EnableBloom()
-        {
-            var active = postProcess.GetEffectActive<BloomEffect>();
-            postProcess.SetEffectActive<BloomEffect>(!active);
-            return !active;
-        }
-        public bool EnableDof()
-        {
-            var active = postProcess.GetEffectActive<DepthOfFieldEffect>();
-            postProcess.SetEffectActive<DepthOfFieldEffect>(!active);
-            return !active;
-        }
-        public bool EnableLensFlare()
-        {
-            var active = postProcess.GetEffectActive<LensFlareEffect>();
-            postProcess.SetEffectActive<LensFlareEffect>(!active);
-            return !active;
-        }
-
-        public bool EnableVolumetricLight()
-        {
-            var active = postProcess.GetEffectActive<VolumetricLightEffect>();
-            postProcess.SetEffectActive<VolumetricLightEffect>(!active);
-            return !active;
-        }
-
-        public bool EnableFogWar()
-        {
-            FogOfWarManager.Instance.active = !FogOfWarManager.Instance.active;
-            RenderPipelineManager.GetRendererFeatures<FogOfWarFeature>(RenderPipelineManager.DefaultRendererData).SetActive(FogOfWarManager.Instance.active);
-            return FogOfWarManager.Instance.active;
-        }
-
-        public bool Ghost(GameObject ghost)
-        {
-            Debug.Log($"Ghost {ghost.name}");
-            return true;
-        }
-        public bool SetTest(string name, int aa)
-        {
-            Debug.Log($"Ghost {name} {aa}");
-            return true;
-        }
-
-        private bool fogOfWarGridActive = true;
-        private bool requiresDepthTexture = false;
-        public bool EnableFogOfWarGrid()
-        {
-            Camera.main.orthographic = false;
-            fogOfWarGridActive = !fogOfWarGridActive;
-            FogOfWarManager.Instance.active = fogOfWarGridActive;
-            
-            if (fogOfWarGridActive)
-            {
-                var cameraData = Camera.main?.GetComponent<UniversalAdditionalCameraData>();
-                if (cameraData)
-                {
-                    cameraData.requiresDepthTexture = true;
-                    requiresDepthTexture = true;
-                }
-            }
-
-            return fogOfWarGridActive;
-        }
-
-        private bool fogOfWarRayActive = true;
-        public bool EnableFogOfWarRay()
-        {
-            return true;
-            // Camera.main.orthographic = false;
-            // fogOfWarRayActive = !fogOfWarRayActive;
-            // GameEvent.Get<IBattleLogicEvent>().RefreshLightShadow(fogOfWarRayActive);
-            // GameEvent.Get<IBattleLogicEvent>().RefreshLightShadowRadius(7);
-            // return fogOfWarRayActive;
-        }
     }
 }

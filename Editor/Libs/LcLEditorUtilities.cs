@@ -5,10 +5,31 @@ using System.Linq;
 using Microsoft.Win32;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
+
 namespace LcLTools
 {
     public class LcLEditorUtilities
     {
+
+        public static StyleSheet GetStyleSheet(string name)
+        {
+            return GetAssetByName<StyleSheet>(name);
+        }
+
+        public static T GetAssetByName<T>(string name) where T : UnityEngine.Object
+        {
+            var guids = AssetDatabase.FindAssets($"t:{typeof(T).Name}");
+            foreach (var guid in guids)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                if (Path.GetFileNameWithoutExtension(path) == name)
+                    return AssetDatabase.LoadAssetAtPath<T>(path);
+
+            }
+            return null;
+        }
+
         /// <summary>
         /// 获取所有runtime的目录
         /// </summary>

@@ -1,0 +1,129 @@
+.title {
+  font-size: 20px;
+  text-align: center;
+  align-self: center;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.shader-variant {
+  margin-bottom: 10px;
+}
+.container {
+  flex-direction: row;
+  flex-grow: 1;
+  width: 100%;
+  height: 100%;
+}
+
+.left-container {
+  flex: 1;
+  flex-basis: auto;
+  width:250px;
+  min-width: 150px;
+  flex-grow: 0;
+  overflow: auto;
+  padding: 10px;
+  border-left: 0px;
+  border-top: 0px;
+  border-bottom: 0px;
+  border-color: rgb(78, 78, 78);
+  border-style: solid;
+}
+.center-line {
+  background-color: black;
+  height: 100%;
+  width: 5px;
+  cursor: resize-horizontal;
+}
+
+.right-container {
+  flex: 2;
+  flex-grow: 1;
+  overflow: auto;
+  flex-direction: row;
+}
+
+.shader-collection-assets {
+  margin-bottom: 10px;
+}
+.shader-container {
+  margin-bottom: 10px;
+  padding: 10px;
+  width: 50%;
+  min-width: 250px;
+}
+
+.shader-container-title {
+  margin-bottom: 10px;
+  align-self: center;
+  font-size: 16px;
+}
+
+.shader-item-box {
+  align-items: center;
+  flex-direction: row;
+  justify-content: space-between;
+}
+.sort-box {
+  flex-direction: row;
+  align-items: center;
+  margin: 5px;
+  justify-content: space-between;
+
+}
+.sort-button{
+  height: 15px;
+  font-size: 10px;
+}
+.delete-button {
+  right: 10px;
+  position: absolute;
+  margin: 0;
+  height: 90%;
+}
+.variant-count {
+  color: rgb(255, 255, 0);
+  font-size: 15px;
+}
+.shader-variant-list-view {
+  flex-grow: 0;
+  border-color: rgb(78, 78, 78);
+  border-width: 3px;
+  margin-bottom: 5;
+}
+.shader-variant-container {
+  flex-direction: column;
+  flex-grow: 1;
+  width: 50%;
+  margin: 10px;
+}
+
+.shader-collect-button {
+  margin: 5px;
+  height: 50px;
+}
+
+
+/* Unity 内置样式 */
+.unity-foldout__content {
+  padding-left: 10px;
+  border-left: 10px;
+  border-right: 10px;
+  border-bottom: 10px;
+}
+
+.unity-foldout__toggle {
+  background-color: rgba(0, 0, 0, 0.233);
+  border-width: 1px;
+  border-color: rgb(78, 78, 78);
+}
+.unity-list-view__size-field {
+  height: 14px;
+  right: 2px;
+  top: 2px;
+  min-width: 25px;
+}
+.unity-base-field__label {
+  min-width: auto;
+}

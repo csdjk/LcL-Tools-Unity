@@ -21,23 +21,8 @@ namespace LcLTools
                 return AssetDatabase.GUIDToAssetPath(g[0]);
             }
         }
-
-        public static string stylePath
-        {
-            get
-            {
-                var guids = AssetDatabase.FindAssets($"BuiltInToURPEditor");
-                foreach (var guid in guids)
-                {
-                    var path = AssetDatabase.GUIDToAssetPath(guid);
-                    if (Path.GetExtension(path) == ".uss")
-                    {
-                        return path;
-                    }
-                }
-                return "";
-            }
-        }
+        public static StyleSheet stylePath => LcLEditorUtilities.GetStyleSheet("BuiltInToURPEditor");
+       
 
         static List<GameObject> prefabList = new List<GameObject>();
         static ObjectField parentField;
@@ -64,7 +49,7 @@ namespace LcLTools
         public void CreateGUI()
         {
             VisualElement root = rootVisualElement;
-            root.styleSheets.Add(AssetDatabase.LoadAssetAtPath<StyleSheet>(stylePath));
+            root.styleSheets.Add(stylePath);
 
             var title = new Label("Shader文件列表");
             root.Add(title);

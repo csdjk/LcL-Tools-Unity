@@ -12,7 +12,8 @@ namespace LcLTools
 {
     public class PrefabTools : EditorWindow
     {
-        static string stylePath = "Assets/LiChangLong/LcLTools/Editor/Painter/prefabPainter.uss";
+        public static StyleSheet styleSheet => LcLEditorUtilities.GetStyleSheet("prefabPainter");
+
         static Color BrushNoneInnerColor = new Color(0f, 0f, 1f, 0.05f);
         static Color BrushNoneOuterColor = new Color(0f, 0f, 1f, 1f);
         static Color BrushAddInnerColor = new Color(0f, 1f, 0f, 0.05f);
@@ -84,7 +85,7 @@ namespace LcLTools
         public void CreateGUI()
         {
             VisualElement root = rootVisualElement;
-            root.styleSheets.Add(AssetDatabase.LoadAssetAtPath<StyleSheet>(stylePath));
+            root.styleSheets.Add(styleSheet);
 
             var title = new Label("Prefab List");
             root.Add(title);

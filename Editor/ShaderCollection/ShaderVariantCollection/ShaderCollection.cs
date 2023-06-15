@@ -4,13 +4,11 @@ using UnityEngine;
 using UnityEditor;
 using System.IO;
 using System.Linq;
-using LcLTools;
 
 namespace LcLTools
 {
     public class ShaderCollection
     {
-        readonly public static string[] IncludeFolderList = new string[] { "Assets" };
         private ShaderVariantCollection svc;
 
         public static string ALL_SHADER_VARAINT_ASSET_PATH = "Assets/Resources/Shaders/AllShaders.shadervariants";
@@ -18,24 +16,53 @@ namespace LcLTools
         static ShaderVariantCollection ToolSVC = null;
         static List<string> allShaderNameList = new List<string>();
 
+        public static ShaderCollectionAssets shaderCollectionConfigAssets = null;
 
-        public static void CollectShaderVariantFormCustomsList(string[] allAssets, string[] excludeShaderList = null)
+
+        readonly public static string[] IncludeFolderList = new string[] { "Assets" };
+        static string[] AssetsIncludeFolderList
+        {
+            get
+            {
+                if (shaderCollectionConfigAssets)
+                {
+                    return shaderCollectionConfigAssets.GetAssetsIncludeFolderList();
+                }
+                return IncludeFolderList;
+            }
+            set
+            {
+
+            }
+        }
+
+        static System.Diagnostics.Stopwatch watch = new System.Diagnostics.Stopwatch();
+        public static void CollectShaderVariantFormCustomsList(string[] allAssets)
         {
             //收集材质
             string[] allMatPaths = allAssets.Where((asset) => asset.EndsWith(".mat", StringComparison.OrdinalIgnoreCase)).ToArray();
-            CollectShaderVariantFormMaterials(allMatPaths, excludeShaderList);
+            CollectShaderVariantFormMaterials(allMatPaths);
         }
 
-        public static void CollectShaderVariant(string[] includeFolderList = null, string[] excludeFolderList = null, string[] excludeShaderList = null)
+        public static void CollectShaderVariant()
         {
-            string[] allMatPaths = CollectMatFromAssets(includeFolderList, excludeFolderList);
-            CollectShaderVariantFormMaterials(allMatPaths, excludeShaderList);
+            watch.Start();
+            string[] allMatPaths = CollectMatFromAssets();
+            watch.Stop();
+            Debug.Log($"<color=red>搜索所有资源中的mat,耗时:{watch.ElapsedMilliseconds}ms</color>");
+
+            watch.Reset();
+            watch.Start();
+            CollectShaderVariantFormMaterials(allMatPaths);
+            watch.Stop();
+            Debug.Log($"<color=red>shader_features收集完毕,耗时:{watch.ElapsedMilliseconds}ms</color>");
         }
+
 
         /// <summary>
         /// 简单收集
         /// </summary>
-        public static void CollectShaderVariantFormMaterials(string[] allMatPaths, string[] excludeShaderList = null)
+        public static void CollectShaderVariantFormMaterials(string[] allMatPaths)
         {
             //创建上下文
             //先搜集所有keyword到工具类SVC
@@ -44,12 +71,6 @@ namespace LcLTools
             foreach (var guid in shaders)
             {
                 var shaderPath = AssetDatabase.GUIDToAssetPath(guid);
-                // if (shaderPath.Contains("Lit"))
-                // {
-                //     Debug.Log($"跳过shader:{shaderPath}");
-                //     continue;
-                // }
-                //var shader = AssetDatabase.LoadAssetAtPath<Shader>(shaderPath);
                 //清理shader的默认图片
                 Shader shader = null;
                 bool ischanged = false;
@@ -101,11 +122,11 @@ namespace LcLTools
                 Directory.CreateDirectory(dirt);
             }
 
-            AssetDatabase.CreateAsset(ToolSVC, toolsSVCpath);
+            // AssetDatabase.CreateAsset(ToolSVC, toolsSVCpath);
 
             //开始收集ShaderVaraint
             ShaderVariantCollection allShaderVaraint = null;
-            var tools = new ShaderVariantsCollectionTools(excludeShaderList);
+            var tools = new ShaderVariantsCollectionTools(shaderCollectionConfigAssets);
             allShaderVaraint = tools.CollectionKeywords(allMatPaths.ToArray(), ToolSVC);
 
             //输出SVC文件
@@ -119,12 +140,10 @@ namespace LcLTools
             AssetDatabase.CreateAsset(allShaderVaraint, ALL_SHADER_VARAINT_ASSET_PATH);
             AssetDatabase.Refresh();
 
+
+
             Debug.Log("<color=red>shader_features收集完毕,multi_compiles默认全打包需要继承IPreprocessShaders.OnProcessShader自行剔除!</color>");
-            // var dependencies = AssetDatabase.GetDependencies(ALL_SHADER_VARAINT_ASSET_PATH);
-            // foreach (var guid in dependencies )
-            // {
-            //     Debug.Log("依赖shader:" + guid);
-            // }
+
         }
 
 
@@ -132,25 +151,25 @@ namespace LcLTools
         /// 收集所有资源中的mat
         /// </summary>
         /// <returns></returns>
-        static private string[] CollectMatFromAssets(string[] includeFolderList = null, string[] excludeFolderList = null)
+        static private string[] CollectMatFromAssets()
         {
-            includeFolderList = includeFolderList ?? IncludeFolderList;
             //搜索所有资源中所有可能挂载mat的地方
-            var scriptObjectAssets = AssetDatabase.FindAssets("t:ScriptableObject", includeFolderList).ToList(); //自定义序列化脚本中也有可能有依赖
-            var prefabAssets = AssetDatabase.FindAssets("t:Prefab", includeFolderList).ToList();
-            var matAssets = AssetDatabase.FindAssets("t:Material", includeFolderList).ToList();
+            var scriptObjectAssets = AssetDatabase.FindAssets("t:ScriptableObject", AssetsIncludeFolderList).ToList(); //自定义序列化脚本中也有可能有依赖
+            var prefabAssets = AssetDatabase.FindAssets("t:Prefab", AssetsIncludeFolderList).ToList();
+            var matAssets = AssetDatabase.FindAssets("t:Material", AssetsIncludeFolderList).ToList();
 
             //搜索mat
             var guidList = new List<string>();
             guidList.AddRange(prefabAssets);
             guidList.AddRange(matAssets);
             guidList.AddRange(scriptObjectAssets);
+            var count = guidList.Count;
             List<string> allMatPaths = new List<string>();
             //GUID to assetPath
-            for (int i = 0; i < guidList.Count; i++)
+            for (int i = 0; i < count; i++)
             {
                 var path = AssetDatabase.GUIDToAssetPath(guidList[i]);
-                if (IsExcludePath(path, excludeFolderList))
+                if (shaderCollectionConfigAssets && !shaderCollectionConfigAssets.IsPass(path))
                 {
                     Debug.Log("排除路径:" + path);
                     continue;
@@ -168,6 +187,10 @@ namespace LcLTools
                         scriptObjectAssets.Add(LcLEditorUtilities.AssetPathToGUID(dp));
                     }
                 }
+
+                // Update progress bar
+                float progress = (float)i / count;
+                EditorUtility.DisplayProgressBar("Collecting Materials", $"Processing {path}", progress);
             }
 
             //ScripttableObject 里面有可能存mat信息
@@ -181,24 +204,8 @@ namespace LcLTools
                 }
             }
 
-
+            EditorUtility.ClearProgressBar();
             return allMatPaths.Distinct().ToArray();
-        }
-
-        private static bool IsExcludePath(string path, string[] excludeFolderList)
-        {
-            if (excludeFolderList == null || excludeFolderList.Length == 0)
-            {
-                return false;
-            }
-            foreach (var exclude in excludeFolderList)
-            {
-                if (path.Contains(exclude))
-                {
-                    return true;
-                }
-            }
-            return false;
         }
 
         /// <summary>

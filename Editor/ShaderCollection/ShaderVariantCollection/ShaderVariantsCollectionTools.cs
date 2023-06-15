@@ -40,16 +40,11 @@ namespace LcLTools
             this.excludeShaderNames = excludeShaderNames;
         }
 
-
-        private bool IsExclude(string name)
+        public ShaderVariantsCollectionTools(ShaderCollectionAssets shaderCollectionConfigAssets)
         {
-            if (excludeShaderNames == null || excludeShaderNames.Length == 0)
-            {
-                return false;
-            }
-
-            return excludeShaderNames.Contains(Path.GetFileName(name));
+            this.shaderCollectionConfigAssets = shaderCollectionConfigAssets;
         }
+
         /// <summary>
         /// 搜集keywords
         /// </summary>
@@ -66,9 +61,8 @@ namespace LcLTools
                     Debug.LogError("加载mat失败:" + path);
                     continue;
                 }
-                if (IsExclude(material.shader.name))
+                if (shaderCollectionConfigAssets && !shaderCollectionConfigAssets.IsPass(material.shader))
                 {
-                    Debug.Log("排除Shader:" + material.shader);
                     continue;
                 }
 
@@ -83,16 +77,13 @@ namespace LcLTools
                 var passTypes = shaderData.passTypes.Distinct();
                 foreach (var pt in passTypes)
                 {
+                    if (shaderCollectionConfigAssets && !shaderCollectionConfigAssets.IsPass((PassType)pt))
+                    {
+                        continue;
+                    }
                     var shaderVaraint = AddVariantOfPassTypeToCollection((PassType)pt, material);
                     shaderCollection.Add(shaderVaraint);
                 }
-                //SRP的搜集
-                // AddVariantOfPassTypeToCollection(PassType.ScriptableRenderPipeline, material);
-                // //ShadiwCast的keyword
-                // if (material.FindPass("ShadowCaster") != -1)
-                // {
-                //     AddVariantOfPassTypeToCollection(PassType.ShadowCaster, material);
-                // }
             }
 
             return shaderCollection;
@@ -192,6 +183,7 @@ namespace LcLTools
         }
 
         Dictionary<Shader, List<string>> shaderKeyworldsDic = new Dictionary<Shader, List<string>>();
+        private ShaderCollectionAssets shaderCollectionConfigAssets;
 
         /// <summary>
         /// 获取所有的GlobalKeyword
