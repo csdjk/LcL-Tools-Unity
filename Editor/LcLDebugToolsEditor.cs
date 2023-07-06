@@ -23,13 +23,14 @@ namespace LcLTools
         private SerializedProperty lodLevelProp;
         private SerializedProperty showLODProp;
         private SerializedProperty postProcessProp;
+        private SerializedProperty gameObjectListProp;
         private SerializedProperty sceneListProp;
         private SerializedProperty singleListProp;
         private SerializedProperty toggleListProp;
         private SerializedProperty buttonDataListProp;
         private SerializedProperty highConsumptionProp;
         private SerializedProperty highIterationsProp;
-        
+
         private void OnEnable()
         {
             uiBoxSizeProp = serializedObject.FindProperty("uiBoxSize");
@@ -38,6 +39,7 @@ namespace LcLTools
             lodLevelProp = serializedObject.FindProperty("lodLevel");
             showLODProp = serializedObject.FindProperty("showLOD");
             postProcessProp = serializedObject.FindProperty("postProcess");
+            gameObjectListProp = serializedObject.FindProperty("gameObjectList");
             sceneListProp = serializedObject.FindProperty("sceneList");
             singleListProp = serializedObject.FindProperty("singleList");
             toggleListProp = serializedObject.FindProperty("toggleList");
@@ -76,6 +78,7 @@ namespace LcLTools
             EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.PropertyField(postProcessProp);
+            EditorGUILayout.PropertyField(gameObjectListProp);
             EditorGUILayout.PropertyField(singleListProp, new GUIContent("单选切换："), true);
             EditorGUILayout.PropertyField(toggleListProp, new GUIContent("多选切换："), true);
 
@@ -189,7 +192,7 @@ namespace LcLTools
                                     {
                                         value = EditorGUILayout.FloatField(value != null ? (float)value : 0);
                                     }
-                                    else if (paramData.ParameterType.IsSubclassOf(typeof(MonoBehaviour)) || paramData.ParameterType.IsSubclassOf(typeof(ScriptableObject)))
+                                    else if (paramData.ParameterType.IsSubclassOf(typeof(MonoBehaviour)) || paramData.ParameterType.Equals(typeof(GameObject)) || paramData.ParameterType.IsSubclassOf(typeof(ScriptableObject)))
                                     {
                                         var type = paramData.GetType();
                                         value = EditorGUILayout.ObjectField(value != null ? (UnityEngine.Object)value : null, paramData.ParameterType, true);

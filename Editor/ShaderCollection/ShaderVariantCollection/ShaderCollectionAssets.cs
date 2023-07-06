@@ -6,7 +6,7 @@ using UnityEngine.Rendering;
 namespace LcLTools
 {
 
-    [CreateAssetMenu(fileName = "ShaderCollectionAssets", menuName = "ShaderVariantTools/ShaderCollectionAssets", order = 0)]
+    [CreateAssetMenu(fileName = "ShaderCollectionAssets", menuName = "LcL/ShaderVariantTools/ShaderCollectionAssets", order = 0)]
     public class ShaderCollectionAssets : ScriptableObject
     {
         [Rename("只在以下目录资源收集Shader变体", "")]

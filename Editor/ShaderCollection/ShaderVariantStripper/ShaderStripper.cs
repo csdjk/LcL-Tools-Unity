@@ -21,19 +21,28 @@ namespace LcLTools
         private readonly static string ShaderVariantStripperOutput = "ShaderVariantStripperOutput.txt";
         private readonly static string ShaderVariantBuildOutput = "ShaderVariantBuildOutput.txt";
         private static string[] path = { "Assets" };
-        private static ShaderStripperAssets[] m_Configs;
+        private static List<ShaderStripperAssets> m_Configs;
         public static void InitShaderStripperAssets()
         {
+            if (m_Configs == null)
+            {
+                m_Configs = new List<ShaderStripperAssets>();
+            }
+            m_Configs.Clear();
             string[] guids = AssetDatabase.FindAssets("t:ShaderStripperAssets", path);
-            m_Configs = (from guid in guids
-                         select AssetDatabase.LoadAssetAtPath<ShaderStripperAssets>(
-                             AssetDatabase.GUIDToAssetPath(guid)))
-                        .ToArray();
+            foreach (var gid in guids)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(gid);
+                var config = AssetDatabase.LoadAssetAtPath<ShaderStripperAssets>(path);
+                if (config)
+                {
+                    m_Configs.Add(config);
+                }
+            }
         }
 
         public void OnProcessShader(Shader shader, ShaderSnippetData snippet, IList<ShaderCompilerData> data)
         {
-            InitShaderStripperAssets();
             foreach (var config in m_Configs)
             {
                 if (config.Active)

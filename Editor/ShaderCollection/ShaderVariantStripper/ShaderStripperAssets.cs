@@ -20,7 +20,7 @@ namespace LcLTools
         }
     }
 
-    [CreateAssetMenu(fileName = "ShaderStripperAssets", menuName = "ShaderVariantTools/ShaderStripperAssets", order = 0)]
+    [CreateAssetMenu(fileName = "ShaderStripperAssets", menuName = "LcL/ShaderVariantTools/ShaderStripperAssets", order = 0)]
     public class ShaderStripperAssets : ScriptableObject
     {
 
@@ -46,7 +46,14 @@ namespace LcLTools
         new VariantStripData("UNITY_SINGLE_PASS_STEREO"),
         new VariantStripData("EDITOR_VISUALIZATION"),
     };
-
+        private void OnEnable()
+        {
+            Debug.Log("OnEnable");
+        }
+        public ShaderStripperAssets()
+        {
+            Debug.Log("ShaderStripperAssets");
+        }
 
         // 判断shader是否排除shader列表里面
         public bool IsInShaderExcludeShaderList(Shader shader)
@@ -111,40 +118,5 @@ namespace LcLTools
             return false;
         }
 
-        // public void OnProcessShader(Shader shader, ShaderSnippetData snippet, IList<ShaderCompilerData> data)
-        // {
-        //     for (int i = data.Count - 1; i >= 0; --i)
-        //     {
-        //         bool isBreak = false;
-        //         for (int j = 0; j < combineKeywords.Count; ++j)
-        //         {
-        //             var keywords = combineKeywords[j];
-        //             var total = keywords.Length;
-        //             if (total == 0) continue;
-
-        //             var count = 0;
-        //             foreach (var keyword in keywords)
-        //             {
-        //                 if (data[i].shaderKeywordSet.IsEnabled(keyword))
-        //                 {
-        //                     count++;
-        //                 }
-        //                 else
-        //                 {
-        //                     break;
-        //                 }
-        //             }
-        //             // 当这个变体全部都开启了keyword，就剔除。
-        //             if (count == total)
-        //             {
-        //                 Debug.Log(data[i].shaderKeywordSet.GetShaderKeywords().ToString());
-        //                 data.RemoveAt(i);
-        //                 isBreak = true;
-        //                 break;
-        //             }
-        //         }
-        //         if (isBreak) break;
-        //     }
-        // }
     }
 }
