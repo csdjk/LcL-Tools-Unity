@@ -159,5 +159,84 @@ namespace LcLTools
 
             return infoFields;
         }
+
+        
+        /// ================================ ListView Extension ================================
+        public static Button GetAddButton(this ListView listView)
+        {
+            return listView.Q<Button>(name: "unity-list-view__add-button");
+        }
+        /// <summary>
+        /// 注册添加按钮的onClick事件
+        /// </summary>
+        /// <param name="listView"></param>
+        /// <param name="onClick"></param>
+        public static void RegisterAddButtonOnClick(this ListView listView, Action onClick)
+        {
+            var addButton = listView.GetAddButton();
+            if (addButton != null)
+            {
+                addButton.clickable = new Clickable(onClick);
+            }
+        }
+
+        public static Button GetRemoveButton(this ListView listView)
+        {
+            return listView.Q<Button>(name: "unity-list-view__remove-button");
+        }
+        /// <summary>
+        /// 注册删除按钮的onClick事件
+        /// </summary>
+        /// <param name="listView"></param>
+        /// <param name="onClick"></param>
+        public static void RegisterRemoveButtonOnClick(this ListView listView, Action onClick)
+        {
+            var removeButton = listView.GetRemoveButton();
+            if (removeButton != null)
+            {
+                removeButton.clickable = new Clickable(onClick);
+            }
+        }
+        /// <summary>
+        /// 注册删除按钮的onClick事件
+        /// </summary>
+        /// <param name="listView"></param>
+        /// <param name="onClick"></param>
+        public static void RegisterRemoveButtonOnClick(this ListView listView, Action<int> onClick)
+        {
+            var removeButton = listView.GetRemoveButton();
+            if (removeButton != null)
+            {
+                removeButton.clickable = new Clickable(() =>
+                {
+                    var index = listView.selectedIndex;
+                    if (index >= 0)
+                    {
+                        onClick(index);
+                    }
+                });
+            }
+        }
+
+
+
+        /// ================================ Animation ================================
+        /// 例如USS：
+        // .warn {
+        //     border-width: 1px;
+        //     border-color: transparent;
+        //     transition-property: border-color;
+        //     transition-timing-function: ease-out;
+        //     transition-duration: 0.5s;
+        //     transition-delay: 0.2s;
+        // }
+        // .warn.animate {
+        //     border-color: red;
+        // }
+        public static void DelayAddToClassList(this VisualElement ui, string classToAdd = "animate", int delay = 100)
+        {
+            ui.schedule.Execute(() => ui.AddToClassList(classToAdd)).StartingIn(delay);
+        }
     }
+
 }

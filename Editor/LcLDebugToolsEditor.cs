@@ -244,7 +244,7 @@ namespace LcLTools
             foreach (var item in methods)
             {
                 buttonEventList.Add(item.Name);
-                buttonEventParams.Add(item.Name, GetMethodParameters(item));
+                buttonEventParams.TryAdd(item.Name, GetMethodParameters(item));
             }
         }
 
