@@ -22,8 +22,6 @@ namespace LcLTools
         private SerializedProperty fontSizeProp;
         private SerializedProperty lodLevelProp;
         private SerializedProperty showLODProp;
-        private SerializedProperty postProcessProp;
-        private SerializedProperty gameObjectListProp;
         private SerializedProperty sceneListProp;
         private SerializedProperty singleListProp;
         private SerializedProperty toggleListProp;
@@ -38,8 +36,6 @@ namespace LcLTools
             fontSizeProp = serializedObject.FindProperty("fontSize");
             lodLevelProp = serializedObject.FindProperty("lodLevel");
             showLODProp = serializedObject.FindProperty("showLOD");
-            postProcessProp = serializedObject.FindProperty("postProcess");
-            gameObjectListProp = serializedObject.FindProperty("gameObjectList");
             sceneListProp = serializedObject.FindProperty("sceneList");
             singleListProp = serializedObject.FindProperty("singleList");
             toggleListProp = serializedObject.FindProperty("toggleList");
@@ -77,8 +73,6 @@ namespace LcLTools
             }
             EditorGUILayout.EndHorizontal();
 
-            EditorGUILayout.PropertyField(postProcessProp);
-            EditorGUILayout.PropertyField(gameObjectListProp);
             EditorGUILayout.PropertyField(singleListProp, new GUIContent("单选切换："), true);
             EditorGUILayout.PropertyField(toggleListProp, new GUIContent("多选切换："), true);
 

@@ -6,14 +6,17 @@ Shader "lcl/Debugger"
         _MainTex ("Texture", 2D) = "white" { }
         [KeywordEnum(Texture, Texture_R, Texture_G, Texture_B, Texture_A, VertexColor, VertexColor_R, VertexColor_G, VertexColor_B, VertexColor_A, normal, tangent, worldPos, uv0, uv1, uv2)] _ShowValue ("Pass Value", Int) = 0
         [Toggle(_INVERT_ON)]_Invert ("Invert", int) = 0
+        [Toggle(_CUTOFF)]_CUTOFF ("cutoff", int) = 0
+        _Cutoff ("Alpha Cutoff", Range(0.0, 1.0)) = 0.5
         _Gamma ("Gamma", Float) = 1
 
         _ScleraSize ("Size", Range(0, 2)) = 1
     }
     SubShader
     {
-        Tags { "RenderType" = "Opaque" }
+        Tags { "RenderType" = "Transparent" "Queue" = "Transparent" }
         ZWrite ON
+        Blend SrcAlpha OneMinusSrcAlpha
 
         Pass
         {
@@ -25,6 +28,8 @@ Shader "lcl/Debugger"
             #include "UnityCG.cginc"
             #pragma multi_compile _SHOWVALUE_TEXTURE _SHOWVALUE_TEXTURE_R _SHOWVALUE_TEXTURE_G _SHOWVALUE_TEXTURE_B _SHOWVALUE_TEXTURE_A _SHOWVALUE_VERTEXCOLOR _SHOWVALUE_VERTEXCOLOR_R _SHOWVALUE_VERTEXCOLOR_G _SHOWVALUE_VERTEXCOLOR_B _SHOWVALUE_VERTEXCOLOR_A _SHOWVALUE_NORMAL _SHOWVALUE_TANGENT _SHOWVALUE_WORLDPOS _SHOWVALUE_UV0 _SHOWVALUE_UV1 _SHOWVALUE_UV2
             #pragma multi_compile __ _INVERT_ON
+            #pragma multi_compile __ _CUTOFF
+            
 
             struct appdata
             {
@@ -53,6 +58,7 @@ Shader "lcl/Debugger"
             float4 _MainTex_ST;
             float _ScleraSize;
             float _Gamma;
+            float _Cutoff;
             v2f vert(appdata v)
             {
                 v2f o;
@@ -69,21 +75,14 @@ Shader "lcl/Debugger"
 
             float4 frag(v2f i) : SV_Target
             {
-
                 // ================================ Test ================================
-                // // 虹膜大小
-                // float temp = 1 * (0.5 - _ScleraSize);
-                // float2 eyeUV = i.uv.xy * (temp + 1) - (temp * 0.5);
-
-
-                // float2 scleraUV = i.uv.xy * _ScleraSize - (_ScleraSize - 1) * 0.5;
-                // float4 color = tex2D(_MainTex, eyeUV);
-                // return color;
                 // ================================  ================================
-
-
-
                 float4 col = tex2D(_MainTex, i.uv) * _Color;
+
+                #if defined(_CUTOFF)
+                    clip(col.a - _Cutoff);
+                #endif
+
                 float3 res = 1;
                 #ifdef _SHOWVALUE_TEXTURE
                     res = col;
