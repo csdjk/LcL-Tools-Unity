@@ -3,10 +3,40 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using UnityEditor;
+#if FBX_EXPORTER
 using UnityEditor.Formats.Fbx.Exporter;
+#endif
+
 using UnityEngine;
 namespace LcLTools
 {
+
+    [InitializeOnLoad]
+    public class CheckFBXSupport
+    {
+        static CheckFBXSupport()
+        {
+            // AssetDatabase.AllowAutoRefresh();
+            CheckAndAddFBXSupport();
+            // AssetDatabase.DisallowAutoRefresh();
+            LcL_RenderingPipelineDefines.AddDefine("FBX_EXPORTER");
+        }
+
+
+        private static void CheckAndAddFBXSupport()
+        {
+            string manifestPath = Path.Combine(Application.dataPath, "../Packages/manifest.json");
+            string manifestText = File.ReadAllText(manifestPath);
+
+            if (!manifestText.Contains("com.unity.formats.fbx"))
+            {
+                manifestText = manifestText.Replace("\"dependencies\": {", "\"dependencies\": {\n    \"com.unity.formats.fbx\": \"4.1.3\",");
+                File.WriteAllText(manifestPath, manifestText);
+            }
+        }
+    }
+#if FBX_EXPORTER
+
     public class JaveLin_RDC_CSV2FBX : EditorWindow
     {
         [MenuItem("LcLTools/CSV To FBX")]
@@ -17,14 +47,12 @@ namespace LcLTools
             win.Show();
         }
 
-        // jave.lin : 闂傚倸鍊峰ù鍥р枖閺囥垹绐楅柟鐗堟緲閸戠姴鈹戦悩瀹犲缂侊拷?闂備胶绮崹鍏兼叏閵堝鐤鹃柟闂寸劍閻撴盯鏌涚仦涔咁亪鍩€?闁猴拷?闁筹拷?婵拷?缂傚秴锕濠氬Ω閳哄倸浜滈梺鍛婄☉閿曪附瀵奸崟顖涒拺鐟滅増甯╁Λ鎴︽煕韫囨棑鑰跨€碉拷?闂佽宕�?閸欙拷?濮椻偓閺屾洟宕煎┑锟�?濡わ拷?韫囨挾鍩ｆ慨濠呮閹瑰嫰濡搁妷锔锯偓楣冩⒑閸濓拷??妞ゎ厾鍏橀悰顔跨疀濞戞瑧鍙嗛柣搴岛閺呮繄绮堥埀锟�
         public class VertexIDInfo
         {
-            public int IDX;                 // 闂傚倸鍊峰ù鍥р枖閺囥垹绐楅柟鐗堟緲閸戠姴鈹戦悩瀹犲缂侊拷?闂備胶绮崹鍏兼叏閵堝鐤鹃柟闂寸劍閻撴盯鏌涚仦涔咁亪鍩€?闁猴拷?闁筹拷?婵鍋撶€氾拷
-            public VertexInfo vertexInfo;   // 闂傚倸鍊峰ù鍥р枖閺囥垹绐楅柟鐗堟緲閸戠姴鈹戦悩瀹犲缂侊拷?闂備胶绮崹鍏兼叏閵堝鐤鹃柟闂寸劍閻撴盯鏌涚仦涔咁亪鍩€?闁猴拷?闁筹拷?婵拷?缂傚秴锕濠氬Ω閳哄倸浜滈梺鍛婄☉閿曪附瀵奸崟顖涒拺闁革拷?闁稿繑锕㈠銊︽綇閵婏拷?婵傚憡鏅搁柨锟�?
+            public int IDX;
+            public VertexInfo vertexInfo;
         }
 
-        // jave.lin : 闂傚倸鍊峰ù鍥р枖閺囥垹绐楅柟鐗堟緲閸戠姴鈹戦悩瀹犲缂侊拷?闂備胶绮崹鍏兼叏閵堝鐤鹃柟闂寸劍閻撴盯鏌涚仦涔咁亪鍩€?闁猴拷?闁筹拷?婵拷?缂傚秴锕濠氬Ω閳哄倸浜滈梺鍛婄☉閿曪附瀵奸崟顖涒拺鐟滅増甯╁Λ鎴︽煕韫囨棑鑰跨€碉拷?闂佽宕�?閸欙拷?濮椻偓閺屾洟宕煎┑锟�?濡わ拷?韫囨挾鍩ｆ慨濠呮閹瑰嫰濡搁妷锔惧綒闂備胶鎳撻崵鏍箯?
         public enum SemanticType
         {
             Unknown,
@@ -699,7 +727,7 @@ namespace LcLTools
                                 SetAttrName(semantic_name, mappedST.ToString());
                                 Debug.Log(1);
                             }
-                            mappedST = TryGetSemanticType2(semantic_name,mappedST);
+                            mappedST = TryGetSemanticType2(semantic_name, mappedST);
                         }
 
 
@@ -1477,4 +1505,8 @@ namespace LcLTools
             //Debug.Log("FillMeshFromCSV done!");
         }
     }
+
+
+#endif
+
 }

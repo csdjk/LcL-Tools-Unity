@@ -95,6 +95,15 @@ namespace LcLTools
     private float deltaTime = 0.0f;
 
 #endif
+
+#if UNITY_EDITOR
+        [UnityEditor.InitializeOnLoadMethod]
+        static void Init()
+        {
+            UnityEditor.PlayerSettings.allowUnsafeCode = true;
+        }
+#endif
+
         private void Awake()
         {
             if (Application.isPlaying)
