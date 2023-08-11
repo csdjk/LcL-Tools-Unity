@@ -98,7 +98,7 @@ namespace LcLTools
 
 #if UNITY_EDITOR
         [UnityEditor.InitializeOnLoadMethod]
-        static void Init()
+        static void EnableUnsafeCode()
         {
             UnityEditor.PlayerSettings.allowUnsafeCode = true;
         }
