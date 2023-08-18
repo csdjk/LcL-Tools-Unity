@@ -176,6 +176,7 @@ namespace LcLTools
                                     var value = param.GetValue();
                                     if (paramData.ParameterType == typeof(string))
                                     {
+                                        GUI.SetNextControlName("goPath");
                                         value = EditorGUILayout.TextField(value != null ? value.ToString() : paramData.Name);
                                     }
                                     else if (paramData.ParameterType == typeof(int))
@@ -224,8 +225,8 @@ namespace LcLTools
                 EditorGUILayout.EndVertical();
             }
             EditorGUILayout.EndFoldoutHeaderGroup();
-
         }
+
         // 获取所有函数
         private void UpdateFunctionList()
         {
