@@ -5,9 +5,11 @@ using System.IO;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using UnityEngine.Experimental.Rendering;
 using System.Reflection;
+using FogOfWar;
 using Object = UnityEngine.Object;
 using UnityEngine.Profiling;
 
@@ -31,6 +33,15 @@ namespace LcLTools
         public List<object> paramList = new List<object>();
     }
     [Serializable]
+    public class SliderData
+    {
+        public bool active;
+        public string name;
+        public string action;
+        public float value;
+    }
+
+    [Serializable]
     public struct SceneData
     {
         public bool active;
@@ -53,6 +64,8 @@ namespace LcLTools
         public bool showLOD = true;
         public LodLevel lodLevel = LodLevel.LOD300;
 
+        public PostProcess postProcess;
+        public List<GameObject> gameObjectList = new List<GameObject>();
 
         public List<SceneData> sceneList;
         public GameObject[] singleList;
@@ -63,6 +76,7 @@ namespace LcLTools
         private List<ButtonData> buttonDataList;
         [SerializeField, HideInInspector]
 
+        private float renderScale = 1;
 
         private GUIStyle enableStyle;
         private GUIStyle disableStyle;
@@ -80,6 +94,25 @@ namespace LcLTools
 
         }
 
+        public GameObject GetGameObject(string name)
+        {
+            var go = gameObjectList.Find((go) => go.name == name);
+            go = go ? go : GameObject.Find(name);
+            return go;
+        }
+        public GameObject GetGameObject(int index)
+        {
+            return gameObjectList[index];
+        }
+        public T GetGameObject<T>() where T : Component
+        {
+            return gameObjectList.Find((go) => go.TryGetComponent(out T t)).GetComponent<T>();
+        }
+        public List<T> GetGameObjects<T>() where T : Component
+        {
+            return gameObjectList.FindAll((go) => go.TryGetComponent(out T t)).Select((go) => go.GetComponent<T>()).ToList();
+        }
+
         public GUIStyle GetStyle(bool value)
         {
             return value ? enableStyle : disableStyle;
@@ -95,7 +128,32 @@ namespace LcLTools
             GraphicsSettings.useScriptableRenderPipelineBatching = !GraphicsSettings.useScriptableRenderPipelineBatching;
         }
 
-   
+        private bool featureActive;
+        public void PostProcessSwitch()
+        {
+            featureActive = !featureActive;
+            postProcess.postAsset.GetEffect<BloomEffect>().SetActive(featureActive);
+        }
+
+        private bool postActive;
+        public void PostSwitch()
+        {
+            if (gameObject.TryGetComponent(out UniversalAdditionalCameraData camData))
+            {
+                camData.renderPostProcessing = !camData.renderPostProcessing;
+                postActive = camData.renderPostProcessing;
+            }
+
+            postProcess.FinalFeature.SetActive(!postActive);
+        }
+
+        private bool bloomFeatureActive;
+        public string GetBloomFeatureState()
+        {
+            return bloomFeatureActive ? "BloomF(ing...)" : "BloomF";
+        }
+
+
         public void GotoScene(int index)
         {
             SceneManager.LoadScene(index);
@@ -247,6 +305,22 @@ namespace LcLTools
                 GUILayout.EndHorizontal();
             }
             // GUILayout.Label($"ReversedZ: {SystemInfo.usesReversedZBuffer}", GetStyle(SystemInfo.usesReversedZBuffer));
+            GUILayout.BeginHorizontal();
+            {
+                GUILayout.Label("RenderScale", GUILayout.Height(30), GUILayout.Width(150));
+                var renderScaleTemp = renderScale;
+                renderScale = GUILayout.HorizontalSlider(renderScale, 0, 1.2f, GUILayout.Height(30));
+                renderScale = (float)Math.Round(renderScale, 2);
+                renderScale = float.Parse(GUILayout.TextField(renderScale.ToString(), enableStyle, GUILayout.Height(30), GUILayout.Width(100)));
+                // set render scale
+                if (renderScaleTemp != renderScale)
+                {
+                    var urpAsset = GraphicsSettings.renderPipelineAsset as UniversalRenderPipelineAsset;
+                    urpAsset.renderScale = renderScale;
+                }
+            }
+            GUILayout.EndHorizontal();
+
 
             GUILayout.BeginHorizontal();
             {
@@ -367,6 +441,25 @@ namespace LcLTools
             return false;
         }
 
+
+        public bool SupportsComputeShaders()
+        {
+            return SystemInfo.supportsComputeShaders;
+        }
+        public bool ReversedZ()
+        {
+            return SystemInfo.usesReversedZBuffer;
+        }
+        public bool DepthTexture()
+        {
+            var cameraData = Camera.main?.GetComponent<UniversalAdditionalCameraData>();
+            return cameraData.requiresDepthTexture;
+        }
+        public bool SupportsTextureFormatASTC()
+        {
+            return SystemInfo.SupportsTextureFormat(TextureFormat.ASTC_4x4);
+        }
         // ================================ Button Function ================================
+      
     }
 }
