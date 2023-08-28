@@ -78,7 +78,7 @@ namespace LcLTools
                 if (ai is ShaderImporter shaderImporter)
                 {
                     shader = shaderImporter.GetShader();
-
+#if UNITY_PIPELINE_URP
                     for (int i = 0; i < ShaderUtil.GetPropertyCount(shader); i++)
                     {
                         var type = ShaderUtil.GetPropertyType(shader, i);
@@ -94,6 +94,7 @@ namespace LcLTools
                             }
                         }
                     }
+#endif
                 }
                 else
                 {

@@ -5,11 +5,13 @@ using System.IO;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
+#if UNITY_PIPELINE_URP
 using UnityEngine.Rendering.Universal;
+#endif
+
 using UnityEngine.SceneManagement;
 using UnityEngine.Experimental.Rendering;
 using System.Reflection;
-using FogOfWar;
 using Object = UnityEngine.Object;
 using UnityEngine.Profiling;
 
@@ -64,7 +66,6 @@ namespace LcLTools
         public bool showLOD = true;
         public LodLevel lodLevel = LodLevel.LOD300;
 
-        public PostProcess postProcess;
         public List<GameObject> gameObjectList = new List<GameObject>();
 
         public List<SceneData> sceneList;
@@ -128,31 +129,7 @@ namespace LcLTools
             GraphicsSettings.useScriptableRenderPipelineBatching = !GraphicsSettings.useScriptableRenderPipelineBatching;
         }
 
-        private bool featureActive;
-        public void PostProcessSwitch()
-        {
-            featureActive = !featureActive;
-            postProcess.postAsset.GetEffect<BloomEffect>().SetActive(featureActive);
-        }
-
-        private bool postActive;
-        public void PostSwitch()
-        {
-            if (gameObject.TryGetComponent(out UniversalAdditionalCameraData camData))
-            {
-                camData.renderPostProcessing = !camData.renderPostProcessing;
-                postActive = camData.renderPostProcessing;
-            }
-
-            postProcess.FinalFeature.SetActive(!postActive);
-        }
-
-        private bool bloomFeatureActive;
-        public string GetBloomFeatureState()
-        {
-            return bloomFeatureActive ? "BloomF(ing...)" : "BloomF";
-        }
-
+   
 
         public void GotoScene(int index)
         {
@@ -304,6 +281,9 @@ namespace LcLTools
                 }
                 GUILayout.EndHorizontal();
             }
+
+#if UNITY_PIPELINE_URP
+
             // GUILayout.Label($"ReversedZ: {SystemInfo.usesReversedZBuffer}", GetStyle(SystemInfo.usesReversedZBuffer));
             GUILayout.BeginHorizontal();
             {
@@ -320,7 +300,7 @@ namespace LcLTools
                 }
             }
             GUILayout.EndHorizontal();
-
+#endif
 
             GUILayout.BeginHorizontal();
             {
@@ -452,8 +432,13 @@ namespace LcLTools
         }
         public bool DepthTexture()
         {
+#if UNITY_PIPELINE_URP
+
             var cameraData = Camera.main?.GetComponent<UniversalAdditionalCameraData>();
             return cameraData.requiresDepthTexture;
+#else
+            return false;
+#endif
         }
         public bool SupportsTextureFormatASTC()
         {

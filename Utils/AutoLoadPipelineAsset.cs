@@ -1,3 +1,4 @@
+#if UNITY_PIPELINE_URP
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -55,3 +56,4 @@ public class AutoLoadPipelineAsset : MonoBehaviour
         }
     }
 }
+#endif
