@@ -49,7 +49,8 @@ public class QuadCombine : EditorWindow
                 for (int j = 0; j < mesh.vertexCount; j++)
                 {
                     //默认合并结构是，quad在一个父物体下，那么localPosition就是距离父物体中心（局部空间原点）的偏离向量。
-                    centerOffset.Add(meshfilters[i].transform.position);
+                    // centerOffset.Add(meshfilters[i].transform.position);
+                    centerOffset.Add(meshfilters[i].transform.localPosition);
                 }
             }
 
@@ -74,6 +75,8 @@ public class QuadCombine : EditorWindow
 
             AssetDatabase.Refresh();
             Debug.Log("保存文件到：" + savePath);
+
+            DestroyImmediate(go);
         }
 
     }
