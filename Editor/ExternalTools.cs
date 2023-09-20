@@ -25,7 +25,7 @@ namespace LcLTools
         /// <returns></returns>
         public static bool IsContainsNonPicture(string path)
         {
-            string pattern = @"\.(jpg|png|tga|psd|jpeg)$";
+            string pattern = @"\.(jpg|JPG|png|PNG|tga|TGA|psd|jpeg)$";
             string[] arr = path.Split(' ');
             foreach (string s in arr)
             {
