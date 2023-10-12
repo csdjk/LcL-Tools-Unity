@@ -25,7 +25,8 @@ namespace LcLTools
         /// <returns></returns>
         public static bool IsContainsNonPicture(string path)
         {
-            string pattern = @"\.(jpg|JPG|png|PNG|tga|TGA|psd|jpeg)$";
+            path = path.ToLower();
+            string pattern = @"\.(jpg|png|tga|psd|jpeg)$";
             string[] arr = path.Split(' ');
             foreach (string s in arr)
             {
@@ -46,6 +47,7 @@ namespace LcLTools
         /// <returns></returns>
         public static bool IsContainsNonModel(string path)
         {
+            path = path.ToLower();
             string pattern = @"\.(fbx|obj)$";
             string[] arr = path.Split(' ');
             foreach (string s in arr)
