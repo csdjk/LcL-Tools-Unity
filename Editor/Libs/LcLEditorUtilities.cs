@@ -79,17 +79,29 @@ namespace LcLTools
         }
 
         // 保存RenderTexture
-        public static void SaveRenderTextureToTexture(RenderTexture rt, string path)
+        public static void SaveRenderTextureToTexture(RenderTexture rt, string path, TextureFormat format = TextureFormat.RGB24)
         {
             RenderTexture.active = rt;
-            Texture2D tex = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
+            Texture2D tex = new Texture2D(rt.width, rt.height, format, false);
             tex.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
             RenderTexture.active = null;
 
+            var ext = Path.GetExtension(path);
             byte[] bytes;
-            bytes = tex.EncodeToPNG();
+            switch (ext)
+            {
+                case ".png":
+                    bytes = tex.EncodeToPNG();
+                    break;
+                case ".tga":
+                    bytes = tex.EncodeToTGA();
+                    break;
+                default:
+                    bytes = tex.EncodeToJPG();
+                    break;
+            }
 
-            System.IO.File.WriteAllBytes(path, bytes);
+            File.WriteAllBytes(path, bytes);
             AssetDatabase.ImportAsset(path);
             Debug.Log("Saved to " + path);
         }
