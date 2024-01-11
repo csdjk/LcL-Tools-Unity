@@ -155,7 +155,7 @@ namespace LcLTools
             if (trsArr == null) return;
             foreach (var trs in trsArr)
             {
-                Undo.RecordObject(trs, "Show Objects");
+                Undo.RecordObject(trs.gameObject, "Show Objects");
                 trs.gameObject.SetActive(!trs.gameObject.activeSelf);
             }
         }

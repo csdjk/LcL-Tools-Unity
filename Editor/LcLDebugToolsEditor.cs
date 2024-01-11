@@ -28,9 +28,12 @@ namespace LcLTools
         private SerializedProperty buttonDataListProp;
         private SerializedProperty highConsumptionProp;
         private SerializedProperty highIterationsProp;
+        private SerializedProperty showParamWindowProp;
+        private SerializedProperty paramListProp;
 
         private void OnEnable()
         {
+
             uiBoxSizeProp = serializedObject.FindProperty("uiBoxSize");
             buttonHeightProp = serializedObject.FindProperty("buttonHeight");
             fontSizeProp = serializedObject.FindProperty("fontSize");
@@ -42,6 +45,10 @@ namespace LcLTools
             buttonDataListProp = serializedObject.FindProperty("buttonDataList");
             highConsumptionProp = serializedObject.FindProperty("highConsumption");
             highIterationsProp = serializedObject.FindProperty("highIterations");
+
+            showParamWindowProp = serializedObject.FindProperty("showParamWindow");
+            paramListProp = serializedObject.FindProperty("paramList");
+
         }
 
         public override void OnInspectorGUI()
@@ -78,6 +85,17 @@ namespace LcLTools
 
             DrawButtonDataList();
             DrawSceneList();
+
+            EditorGUILayout.Space(10);
+            EditorGUILayout.BeginVertical("U2D.createRect");
+            {
+                EditorGUILayout.PropertyField(showParamWindowProp, new GUIContent("显示参数调节面板"), true);
+
+                // EditorGUILayout.PropertyField(paramListProp, new GUIContent("参数对象列表"), true);
+                DrawParamsList();
+            }
+            EditorGUILayout.EndVertical();
+
             serializedObject.ApplyModifiedProperties();
         }
         private bool showSceneList = true;
@@ -261,6 +279,76 @@ namespace LcLTools
                           .Where(scene => scene.enabled)
                           .Select(scene => Path.GetFileNameWithoutExtension(scene.path))
                           .ToArray();
+        }
+
+
+        private bool showParamList = true;
+
+        private void DrawParamsList()
+        {
+            showParamList = EditorGUILayout.BeginFoldoutHeaderGroup(showParamList, "参数列表");
+            if (showParamList)
+            {
+                EditorGUILayout.BeginVertical("box");
+                {
+                    for (int i = 0; i < paramListProp.arraySize; i++)
+                    {
+                        SerializedProperty paramData = paramListProp.GetArrayElementAtIndex(i);
+
+                        EditorGUILayout.BeginHorizontal();
+                        {
+                            SerializedProperty active = paramData.FindPropertyRelative("active");
+                            SerializedProperty script = paramData.FindPropertyRelative("script");
+                            SerializedProperty paramName = paramData.FindPropertyRelative("paramName");
+
+                            active.boolValue = EditorGUILayout.Toggle(active.boolValue, GUILayout.Width(20));
+
+                            var paramList = GetFieldList(script.objectReferenceValue?.GetType());
+
+                            var indexValue = Array.IndexOf(paramList, paramName.stringValue);
+                            int selectedIndex = EditorGUILayout.Popup(indexValue, paramList);
+                            if (selectedIndex == -1) selectedIndex = 0;
+                            paramName.stringValue = paramList[selectedIndex];
+
+                            script.objectReferenceValue = EditorGUILayout.ObjectField(script.objectReferenceValue, typeof(MonoBehaviour), true);
+
+
+
+                            if (GUILayout.Button("-", GUILayout.Width(50)))
+                            {
+                                paramListProp.DeleteArrayElementAtIndex(i);
+                                i--;
+                            }
+                        }
+                        EditorGUILayout.EndHorizontal();
+                    }
+
+                    if (GUILayout.Button("+"))
+                    {
+                        paramListProp.arraySize++;
+                        SerializedProperty newParamData = paramListProp.GetArrayElementAtIndex(paramListProp.arraySize - 1);
+                        newParamData.FindPropertyRelative("active").boolValue = true;
+                        newParamData.FindPropertyRelative("paramName").stringValue = "";
+                        newParamData.FindPropertyRelative("script").objectReferenceValue = null;
+                    }
+                    serializedObject.ApplyModifiedProperties();
+                }
+                EditorGUILayout.EndVertical();
+            }
+            EditorGUILayout.EndFoldoutHeaderGroup();
+
+        }
+
+        private string[] GetFieldList(Type type)
+        {
+            if (type == null) return new string[1];
+            var fields = type.GetFields(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public);
+            var fieldList = new List<string>();
+            foreach (var item in fields)
+            {
+                fieldList.Add(item.Name);
+            }
+            return fieldList.ToArray();
         }
     }
 }

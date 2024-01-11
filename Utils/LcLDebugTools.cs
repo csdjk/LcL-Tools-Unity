@@ -51,6 +51,13 @@ namespace LcLTools
         public int index;
     }
 
+    [Serializable]
+    public struct ParamData
+    {
+        public bool active;
+        public MonoBehaviour script;
+        public string paramName;
+    }
     [ExecuteAlways, AddComponentMenu("LcLTools/LcLDebugTools", 0)]
     public class LcLDebugTools : MonoBehaviour
     {
@@ -62,7 +69,17 @@ namespace LcLTools
         [Range(10, 100)]
         public int fontSize = 25;
         private Rect uiBoxRect = new Rect(0, 0, 0, 0);
+        //---------------------------Param Window-------------------------------------
+
+        static int paramWindowID = 102;
+        private Rect paramBoxRect = new Rect(0, 0, 0, 0);
+        public bool showParamWindow = false;
+        public MonoBehaviour[] paramGoList;
+        public List<ParamData> paramList;
+
+
         //---------------------------GUI-------------------------------------
+
         public bool showLOD = true;
         public LodLevel lodLevel = LodLevel.LOD300;
 
@@ -129,7 +146,7 @@ namespace LcLTools
             GraphicsSettings.useScriptableRenderPipelineBatching = !GraphicsSettings.useScriptableRenderPipelineBatching;
         }
 
-   
+
 
         public void GotoScene(int index)
         {
@@ -251,6 +268,9 @@ namespace LcLTools
                 disableStyle.fontSize = fontSize;
                 uiBoxRect.x = Screen.width - uiBoxSize.x;
                 uiBoxRect.y = Screen.height - uiBoxSize.y;
+                // pos is right top
+                paramBoxRect.x = Screen.width - uiBoxSize.x;
+                paramBoxRect.y = 0;
             }
             // 判断屏幕分辨率是否发生变化
             if (prevScreenWidth != Screen.width || prevScreenHeight != Screen.height)
@@ -263,9 +283,17 @@ namespace LcLTools
             uiBoxRect = GUI.Window(windowID, uiBoxRect, WindowCallBack, "");
             uiBoxRect.width = uiBoxSize.x;
             uiBoxRect.height = uiBoxSize.y;
-        }
 
-        private void WindowCallBack(int windowID)
+
+            if (showParamWindow)
+            {
+                paramBoxRect = GUI.Window(paramWindowID, paramBoxRect, ParamWindowCallBack, "");
+                paramBoxRect.width = uiBoxSize.x;
+                paramBoxRect.height = uiBoxSize.y;
+            }
+
+        }
+        private void ParamWindowCallBack(int windowID)
         {
             GUI.skin.button.fontSize = fontSize;
             GUI.skin.label.fontSize = fontSize;
@@ -276,14 +304,12 @@ namespace LcLTools
                 GUILayout.Label($"Count: {count}");
                 GUILayout.BeginHorizontal();
                 {
-                    highIterations = (int)GUILayout.HorizontalSlider(highIterations, 0, 50000000, GUILayout.Height(30));
+                    highIterations = (int)GUILayout.HorizontalSlider(highIterations, 0, 100000, GUILayout.Height(30));
                     highIterations = int.Parse(GUILayout.TextField(highIterations.ToString(), enableStyle, GUILayout.Height(30), GUILayout.Width(100)));
                 }
                 GUILayout.EndHorizontal();
             }
-
 #if UNITY_PIPELINE_URP
-
             // GUILayout.Label($"ReversedZ: {SystemInfo.usesReversedZBuffer}", GetStyle(SystemInfo.usesReversedZBuffer));
             GUILayout.BeginHorizontal();
             {
@@ -302,6 +328,81 @@ namespace LcLTools
             GUILayout.EndHorizontal();
 #endif
 
+            GUILayout.BeginVertical();
+            {
+                var width = GUILayout.Width(100);
+                var height = GUILayout.Height(30);
+                foreach (var data in paramList)
+                {
+                    if (data.script == null)
+                    {
+                        continue;
+                    }
+                    GUILayout.BeginHorizontal();
+                    {
+                        GUILayout.Label(data.paramName, GUILayout.Height(30), GUILayout.Width(150));
+                        FieldInfo field = data.script.GetType().GetField(data.paramName);
+                        if (field != null)
+                        {
+                            // 获取RangeAttribute
+                            RangeAttribute rangeAttribute = field.GetCustomAttribute<RangeAttribute>();
+
+                            // 如果字段有RangeAttribute，绘制Slider类型
+                            if (rangeAttribute != null)
+                            {
+                                if (field.FieldType == typeof(float))
+                                {
+                                    var value = (float)field.GetValue(data.script);
+                                    value = GUILayout.HorizontalSlider(value, rangeAttribute.min, rangeAttribute.max, height);
+                                    value = (float)Math.Round(value, 2);
+                                    value = float.Parse(GUILayout.TextField(value.ToString(), enableStyle, height, width));
+                                    field.SetValue(data.script, value);
+                                }
+                                else if (field.FieldType == typeof(int))
+                                {
+                                    var value = (int)field.GetValue(data.script);
+                                    value = (int)GUILayout.HorizontalSlider(value, rangeAttribute.min, rangeAttribute.max, height);
+                                    value = int.Parse(GUILayout.TextField(value.ToString(), enableStyle, height, width));
+                                    field.SetValue(data.script, value);
+                                }
+                            }
+                            else
+                            {
+                                if (field.FieldType == typeof(float))
+                                {
+                                    var value = (float)field.GetValue(data.script);
+                                    value = (float)Math.Round(value, 2);
+                                    value = float.Parse(GUILayout.TextField(value.ToString(), enableStyle, height, width));
+                                    field.SetValue(data.script, value);
+                                }
+                                else if (field.FieldType == typeof(int))
+                                {
+                                    var value = (int)field.GetValue(data.script);
+                                    value = int.Parse(GUILayout.TextField(value.ToString(), enableStyle, height, width));
+                                    field.SetValue(data.script, value);
+                                }
+                                else if (field.FieldType == typeof(bool))
+                                {
+                                    var value = (bool)field.GetValue(data.script);
+                                    value = GUILayout.Toggle(value, "", height, width);
+                                    field.SetValue(data.script, value);
+                                }
+                            }
+                        }
+                    }
+                    GUILayout.EndHorizontal();
+                }
+
+            }
+            GUILayout.EndVertical();
+
+        }
+        private void WindowCallBack(int windowID)
+        {
+            GUI.skin.button.fontSize = fontSize;
+            GUI.skin.label.fontSize = fontSize;
+            GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+            GUI.backgroundColor = new Color(0, 0, 0, 0.5f);
             GUILayout.BeginHorizontal();
             {
 
@@ -445,6 +546,8 @@ namespace LcLTools
             return SystemInfo.SupportsTextureFormat(TextureFormat.ASTC_4x4);
         }
         // ================================ Button Function ================================
-      
+
+
+
     }
 }
