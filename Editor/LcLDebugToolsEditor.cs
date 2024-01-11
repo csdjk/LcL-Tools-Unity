@@ -64,12 +64,13 @@ namespace LcLTools
             }
             EditorGUILayout.EndHorizontal();
 
+            EditorGUILayout.PropertyField(uiBoxSizeProp);
+            EditorGUILayout.PropertyField(buttonHeightProp);
+            EditorGUILayout.PropertyField(fontSizeProp);
+
             EditorGUILayout.BeginVertical("U2D.createRect");
             {
-                EditorGUILayout.PropertyField(uiBoxSizeProp);
-                EditorGUILayout.PropertyField(buttonHeightProp);
-                EditorGUILayout.PropertyField(fontSizeProp);
-
+                EditorGUILayout.LabelField("Button Event");
             }
             EditorGUILayout.EndVertical();
 
@@ -90,11 +91,9 @@ namespace LcLTools
             EditorGUILayout.BeginVertical("U2D.createRect");
             {
                 EditorGUILayout.PropertyField(showParamWindowProp, new GUIContent("显示参数调节面板"), true);
-
-                // EditorGUILayout.PropertyField(paramListProp, new GUIContent("参数对象列表"), true);
-                DrawParamsList();
             }
             EditorGUILayout.EndVertical();
+            DrawParamsList();
 
             serializedObject.ApplyModifiedProperties();
         }
@@ -339,11 +338,12 @@ namespace LcLTools
 
         }
 
+        List<string> fieldList = new List<string>();
         private string[] GetFieldList(Type type)
         {
             if (type == null) return new string[1];
+            fieldList.Clear();
             var fields = type.GetFields(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public);
-            var fieldList = new List<string>();
             foreach (var item in fields)
             {
                 fieldList.Add(item.Name);

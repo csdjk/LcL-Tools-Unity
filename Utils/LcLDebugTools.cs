@@ -251,7 +251,7 @@ namespace LcLTools
         void OnGUI()
         {
             HighConsumption();
-            if (uiBoxRect == null)
+            if (uiBoxRect == null || paramBoxRect == null)
             {
                 return;
             }
@@ -280,14 +280,14 @@ namespace LcLTools
                 uiBoxRect.x = Screen.width - uiBoxSize.x;
                 uiBoxRect.y = Screen.height - uiBoxSize.y;
             }
-            uiBoxRect = GUI.Window(windowID, uiBoxRect, WindowCallBack, "");
+            uiBoxRect = GUI.Window(windowID, uiBoxRect, WindowCallBack, "Button");
             uiBoxRect.width = uiBoxSize.x;
             uiBoxRect.height = uiBoxSize.y;
 
 
             if (showParamWindow)
             {
-                paramBoxRect = GUI.Window(paramWindowID, paramBoxRect, ParamWindowCallBack, "");
+                paramBoxRect = GUI.Window(paramWindowID, paramBoxRect, ParamWindowCallBack, "Params");
                 paramBoxRect.width = uiBoxSize.x;
                 paramBoxRect.height = uiBoxSize.y;
             }
@@ -295,15 +295,17 @@ namespace LcLTools
         }
         private void ParamWindowCallBack(int windowID)
         {
+            var width = GUILayout.Width(100);
+            var height = GUILayout.Height(30);
             GUI.skin.button.fontSize = fontSize;
             GUI.skin.label.fontSize = fontSize;
             GUI.skin.label.alignment = TextAnchor.MiddleCenter;
             GUI.backgroundColor = new Color(0, 0, 0, 0.5f);
             if (highConsumption)
             {
-                GUILayout.Label($"Count: {count}");
                 GUILayout.BeginHorizontal();
                 {
+                    GUILayout.Label("计算量", height, GUILayout.Width(150));
                     highIterations = (int)GUILayout.HorizontalSlider(highIterations, 0, 100000, GUILayout.Height(30));
                     highIterations = int.Parse(GUILayout.TextField(highIterations.ToString(), enableStyle, GUILayout.Height(30), GUILayout.Width(100)));
                 }
@@ -313,7 +315,7 @@ namespace LcLTools
             // GUILayout.Label($"ReversedZ: {SystemInfo.usesReversedZBuffer}", GetStyle(SystemInfo.usesReversedZBuffer));
             GUILayout.BeginHorizontal();
             {
-                GUILayout.Label("RenderScale", GUILayout.Height(30), GUILayout.Width(150));
+                GUILayout.Label("RenderScale", height, GUILayout.Width(150));
                 var renderScaleTemp = renderScale;
                 renderScale = GUILayout.HorizontalSlider(renderScale, 0, 1.2f, GUILayout.Height(30));
                 renderScale = (float)Math.Round(renderScale, 2);
@@ -330,11 +332,10 @@ namespace LcLTools
 
             GUILayout.BeginVertical();
             {
-                var width = GUILayout.Width(100);
-                var height = GUILayout.Height(30);
+
                 foreach (var data in paramList)
                 {
-                    if (data.script == null)
+                    if (data.script == null || !data.active)
                     {
                         continue;
                     }
@@ -395,7 +396,7 @@ namespace LcLTools
 
             }
             GUILayout.EndVertical();
-
+            GUI.DragWindow(new Rect(0, 0, Screen.width, Screen.height));
         }
         private void WindowCallBack(int windowID)
         {
