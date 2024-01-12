@@ -59,10 +59,26 @@ namespace LcLTools
             serializedObject.Update();
             EditorGUILayout.BeginHorizontal();
             {
-                EditorGUILayout.PropertyField(highConsumptionProp);
-                EditorGUILayout.PropertyField(highIterationsProp);
+                // check change 
+                EditorGUI.BeginChangeCheck();
+                {
+                    EditorGUILayout.PropertyField(highConsumptionProp);
+                    EditorGUILayout.PropertyField(highIterationsProp);
+                }
+                if (EditorGUI.EndChangeCheck())
+                {
+                    if (highConsumptionProp.boolValue)
+                    {
+                        HeavyPostProcessingFeature.Enable(highIterationsProp.intValue);
+                    }
+                    else
+                    {
+                        HeavyPostProcessingFeature.Disable();
+                    }
+                }
             }
             EditorGUILayout.EndHorizontal();
+
 
             EditorGUILayout.PropertyField(uiBoxSizeProp);
             EditorGUILayout.PropertyField(buttonHeightProp);

@@ -36,14 +36,13 @@ Shader "Hidden/HeavyPostProcessing"
                 output.uv = input.uv;
                 return output;
             }
-
+            int _Count;
             half4 frag(Varyings input) : SV_Target
             {
-                // float2 screenUV = input.positionCS.xy / _ScaledScreenParams.xy;
                 float4 color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
-                for (int j = 0; j < 200; j++)
+                for (int j = 0; j < _Count; j++)
                 {
-                    color.r += sin(color.r) * cos(color.g) +tan(color.b);
+                    color.r += sin(color.r) * cos(color.g) + tan(color.b);
                 }
                 return saturate(color);
             }

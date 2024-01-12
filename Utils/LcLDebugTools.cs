@@ -106,10 +106,19 @@ namespace LcLTools
             }
         }
 
+        [SerializeField] private int highIterations = 200;
+        [SerializeField] private bool highConsumption = false;
+        void OnEnable()
+        {
+            if (highConsumption)
+            {
+                HeavyPostProcessingFeature.Enable(highIterations);
+            }
+        }
 
         void OnDisable()
         {
-
+            HeavyPostProcessingFeature.Disable();
         }
 
         public GameObject GetGameObject(string name)
@@ -219,9 +228,7 @@ namespace LcLTools
             return GraphicsSettings.useScriptableRenderPipelineBatching ? "SRP(ing...)" : "SRP";
         }
 
-        [SerializeField] private int highIterations = 10000000;
-        [SerializeField] private bool highConsumption = true;
-        double count = 0;
+
         private void HighConsumption()
         {
             if (Application.isPlaying && highConsumption)
@@ -233,7 +240,6 @@ namespace LcLTools
                     result *= Mathf.Sin(result);
                     result /= Mathf.Cos(result);
                     result += Mathf.Tan(result);
-                    count += 0.00005f;
                 }
                 Profiler.BeginSample(name);
             }
@@ -250,7 +256,7 @@ namespace LcLTools
         bool isInit = true;
         void OnGUI()
         {
-            HighConsumption();
+            // HighConsumption();
             if (uiBoxRect == null || paramBoxRect == null)
             {
                 return;
@@ -306,7 +312,7 @@ namespace LcLTools
                 GUILayout.BeginHorizontal();
                 {
                     GUILayout.Label("计算量", height, GUILayout.Width(150));
-                    highIterations = (int)GUILayout.HorizontalSlider(highIterations, 0, 100000, GUILayout.Height(30));
+                    highIterations = (int)GUILayout.HorizontalSlider(highIterations, 0, 1000, GUILayout.Height(30));
                     highIterations = int.Parse(GUILayout.TextField(highIterations.ToString(), enableStyle, GUILayout.Height(30), GUILayout.Width(100)));
                 }
                 GUILayout.EndHorizontal();
@@ -547,8 +553,6 @@ namespace LcLTools
             return SystemInfo.SupportsTextureFormat(TextureFormat.ASTC_4x4);
         }
         // ================================ Button Function ================================
-
-
 
     }
 }
