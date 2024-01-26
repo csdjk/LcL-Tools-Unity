@@ -23,7 +23,20 @@ namespace LcLTools
         LOD200 = 200,
         LOD300 = 300,
     }
-
+    public enum ParamType
+    {
+        Int,
+        Float,
+        String,
+    }
+    [Serializable]
+    public class ParamData
+    {
+        public int intValue;
+        public float floatValue;
+        public string stringValue;
+        public ParamType type;
+    }
     [Serializable]
     public class ButtonData
     {
@@ -32,7 +45,7 @@ namespace LcLTools
         public string action;
         public bool buttonState;
         [SerializeReference]
-        public List<object> paramList = new List<object>();
+        public List<ParamData> paramList = new List<ParamData>();
     }
     [Serializable]
     public class SliderData
@@ -52,7 +65,7 @@ namespace LcLTools
     }
 
     [Serializable]
-    public struct ParamData
+    public struct ParamObjectData
     {
         public bool active;
         public MonoBehaviour script;
@@ -75,7 +88,7 @@ namespace LcLTools
         private Rect paramBoxRect = new Rect(0, 0, 0, 0);
         public bool showParamWindow = false;
         public MonoBehaviour[] paramGoList;
-        public List<ParamData> paramList;
+        public List<ParamObjectData> paramObjects;
 
 
         //---------------------------GUI-------------------------------------
@@ -121,24 +134,24 @@ namespace LcLTools
             HeavyPostProcessingFeature.Disable();
         }
 
-        public GameObject GetGameObject(string name)
-        {
-            var go = gameObjectList.Find((go) => go.name == name);
-            go = go ? go : GameObject.Find(name);
-            return go;
-        }
-        public GameObject GetGameObject(int index)
-        {
-            return gameObjectList[index];
-        }
-        public T GetGameObject<T>() where T : Component
-        {
-            return gameObjectList.Find((go) => go.TryGetComponent(out T t)).GetComponent<T>();
-        }
-        public List<T> GetGameObjects<T>() where T : Component
-        {
-            return gameObjectList.FindAll((go) => go.TryGetComponent(out T t)).Select((go) => go.GetComponent<T>()).ToList();
-        }
+        // public GameObject GetGameObject(string name)
+        // {
+        //     var go = gameObjectList.Find((go) => go.name == name);
+        //     go = go ? go : GameObject.Find(name);
+        //     return go;
+        // }
+        // public GameObject GetGameObject(int index)
+        // {
+        //     return gameObjectList[index];
+        // }
+        // public T GetGameObject<T>() where T : Component
+        // {
+        //     return gameObjectList.Find((go) => go.TryGetComponent(out T t)).GetComponent<T>();
+        // }
+        // public List<T> GetGameObjects<T>() where T : Component
+        // {
+        //     return gameObjectList.FindAll((go) => go.TryGetComponent(out T t)).Select((go) => go.GetComponent<T>()).ToList();
+        // }
 
         public GUIStyle GetStyle(bool value)
         {
@@ -339,7 +352,7 @@ namespace LcLTools
             GUILayout.BeginVertical();
             {
 
-                foreach (var data in paramList)
+                foreach (var data in paramObjects)
                 {
                     if (data.script == null || !data.active)
                     {
@@ -520,8 +533,28 @@ namespace LcLTools
             var method = GetType().GetMethod(item.action);
             if (method != null)
             {
+                object[] paramList = new object[item.paramList.Count];
+                // 判断paramList每个元素的类型, 并转换为对应类型的参数
+                for (var i = 0; i < item.paramList.Count; i++)
+                {
+                    var param = item.paramList[i];
+                    switch (param.type)
+                    {
+                        case ParamType.Int:
+                            paramList[i] = param.intValue;
+                            break;
+                        case ParamType.Float:
+                            paramList[i] = param.floatValue;
+                            break;
+                        case ParamType.String:
+                            paramList[i] = param.stringValue;
+                            break;
+                    }
+                }
+                
                 object res;
-                res = method.Invoke(this, item.paramList.ToArray());
+                res = method.Invoke(this, paramList);
+
                 if (res != null)
                     return (bool)res;
             }
@@ -554,5 +587,12 @@ namespace LcLTools
         }
         // ================================ Button Function ================================
 
+        public bool EnableCloudShadow(string path)
+        {
+            // 根据path 获取CloudShadow组件
+            var cloudShadow = GameObject.Find(path).GetComponent<CloudShadow>();
+            cloudShadow.enabled = !cloudShadow.enabled;
+            return cloudShadow.enabled;
+        }
     }
 }

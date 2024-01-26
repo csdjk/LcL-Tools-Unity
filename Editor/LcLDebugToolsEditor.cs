@@ -29,7 +29,7 @@ namespace LcLTools
         private SerializedProperty highConsumptionProp;
         private SerializedProperty highIterationsProp;
         private SerializedProperty showParamWindowProp;
-        private SerializedProperty paramListProp;
+        private SerializedProperty paramObjectsProp;
 
         private void OnEnable()
         {
@@ -47,7 +47,7 @@ namespace LcLTools
             highIterationsProp = serializedObject.FindProperty("highIterations");
 
             showParamWindowProp = serializedObject.FindProperty("showParamWindow");
-            paramListProp = serializedObject.FindProperty("paramList");
+            paramObjectsProp = serializedObject.FindProperty("paramObjects");
 
         }
 
@@ -168,6 +168,24 @@ namespace LcLTools
             EditorGUILayout.EndFoldoutHeaderGroup();
 
         }
+        // 拖拽处理
+        void HandleDragAndDrop(Action<UnityEngine.Object[]> callback)
+        {
+            Event e = Event.current;
+            Rect drop_area = GUILayoutUtility.GetLastRect();
+            if ((e.type == EventType.DragUpdated || e.type == EventType.DragPerform) && drop_area.Contains(e.mousePosition))
+            {
+                DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
+                // 用户已经放下了被拖动的对象
+                if (e.type == EventType.DragPerform)
+                {
+                    DragAndDrop.AcceptDrag();
+                    callback?.Invoke(DragAndDrop.objectReferences);
+                }
+
+                Event.current.Use();
+            }
+        }
 
         private bool showButtonDataList = true;
         private int selectedIndex = 0;
@@ -206,26 +224,50 @@ namespace LcLTools
                                 {
                                     var paramData = paramList[j];
                                     var param = paramListProperty.GetArrayElementAtIndex(j);
-                                    var value = param.GetValue();
+                                    var intValue = param.FindPropertyRelative("intValue");
+                                    var floatValue = param.FindPropertyRelative("floatValue");
+                                    var stringValue = param.FindPropertyRelative("stringValue");
+                                    var type = param.FindPropertyRelative("type");
+
                                     if (paramData.ParameterType == typeof(string))
                                     {
+                                        type.enumValueIndex = (int)ParamType.String;
                                         GUI.SetNextControlName("goPath");
-                                        value = EditorGUILayout.TextField(value != null ? value.ToString() : paramData.Name);
+                                        stringValue.stringValue = EditorGUILayout.TextField(stringValue?.stringValue != null ? stringValue.stringValue : paramData.Name);
+
+                                        HandleDragAndDrop(draggedObjects =>
+                                        {
+                                            GameObject go = draggedObjects[0] as GameObject;
+                                            stringValue.stringValue = go?.transform.GetPath();
+                                        });
                                     }
                                     else if (paramData.ParameterType == typeof(int))
                                     {
-                                        value = EditorGUILayout.IntField(value != null ? (int)value : 0);
+                                        type.enumValueIndex = (int)ParamType.Int;
+                                        intValue.intValue = EditorGUILayout.IntField(intValue.intValue);
                                     }
                                     else if (paramData.ParameterType == typeof(float))
                                     {
-                                        value = EditorGUILayout.FloatField(value != null ? (float)value : 0);
+                                        type.enumValueIndex = (int)ParamType.Float;
+                                        floatValue.floatValue = EditorGUILayout.FloatField(floatValue.floatValue);
                                     }
-                                    else if (paramData.ParameterType.IsSubclassOf(typeof(MonoBehaviour)) || paramData.ParameterType.Equals(typeof(GameObject)) || paramData.ParameterType.IsSubclassOf(typeof(ScriptableObject)))
-                                    {
-                                        var type = paramData.GetType();
-                                        value = EditorGUILayout.ObjectField(value != null ? (UnityEngine.Object)value : null, paramData.ParameterType, true);
-                                    }
-                                    param.SetValue(value);
+                                    // else if (paramData.ParameterType.IsSubclassOf(typeof(MonoBehaviour)) || paramData.ParameterType.Equals(typeof(GameObject)) || paramData.ParameterType.IsSubclassOf(typeof(ScriptableObject)))
+                                    // {
+                                    //     if (value == null || value is "")
+                                    //     {
+                                    //         value = EditorGUILayout.ObjectField(null, paramData.ParameterType, true);
+                                    //     }
+                                    //     else
+                                    //     {
+                                    //         value = EditorGUILayout.ObjectField((UnityEngine.Object)value, paramData.ParameterType, true);
+                                    //     }
+                                    // }
+                                    // param.SetValue(value);
+                                    // set dirt flag
+                                    // if (GUI.changed)
+                                    // {
+                                    //     EditorUtility.SetDirty(target);
+                                    // }
                                 }
                             }
                             // 绘制方法列表
@@ -252,6 +294,15 @@ namespace LcLTools
                         newButtonData.FindPropertyRelative("active").boolValue = true;
                         newButtonData.FindPropertyRelative("name").stringValue = "";
                         newButtonData.FindPropertyRelative("action").stringValue = eventArray[0];
+                        ParamData newParamData = new ParamData
+                        {
+                            // intValue = 0,
+                            // floatValue = 0.0f,
+                            // stringValue = ""
+                        };
+                        newButtonData.FindPropertyRelative("paramList").arraySize = 1;
+                        newButtonData.FindPropertyRelative("paramList").GetArrayElementAtIndex(0).managedReferenceValue = newParamData;
+
                     }
                     serializedObject.ApplyModifiedProperties();
                 }
@@ -306,9 +357,9 @@ namespace LcLTools
             {
                 EditorGUILayout.BeginVertical("box");
                 {
-                    for (int i = 0; i < paramListProp.arraySize; i++)
+                    for (int i = 0; i < paramObjectsProp.arraySize; i++)
                     {
-                        SerializedProperty paramData = paramListProp.GetArrayElementAtIndex(i);
+                        SerializedProperty paramData = paramObjectsProp.GetArrayElementAtIndex(i);
 
                         EditorGUILayout.BeginHorizontal();
                         {
@@ -331,7 +382,7 @@ namespace LcLTools
 
                             if (GUILayout.Button("-", GUILayout.Width(50)))
                             {
-                                paramListProp.DeleteArrayElementAtIndex(i);
+                                paramObjectsProp.DeleteArrayElementAtIndex(i);
                                 i--;
                             }
                         }
@@ -340,8 +391,8 @@ namespace LcLTools
 
                     if (GUILayout.Button("+"))
                     {
-                        paramListProp.arraySize++;
-                        SerializedProperty newParamData = paramListProp.GetArrayElementAtIndex(paramListProp.arraySize - 1);
+                        paramObjectsProp.arraySize++;
+                        SerializedProperty newParamData = paramObjectsProp.GetArrayElementAtIndex(paramObjectsProp.arraySize - 1);
                         newParamData.FindPropertyRelative("active").boolValue = true;
                         newParamData.FindPropertyRelative("paramName").stringValue = "";
                         newParamData.FindPropertyRelative("script").objectReferenceValue = null;
@@ -360,6 +411,11 @@ namespace LcLTools
             if (type == null) return new string[1];
             fieldList.Clear();
             var fields = type.GetFields(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public);
+            if (fields.Length == 0)
+            {
+                fieldList.Add("None");
+                return fieldList.ToArray();
+            }
             foreach (var item in fields)
             {
                 fieldList.Add(item.Name);
