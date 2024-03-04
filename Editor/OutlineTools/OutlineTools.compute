@@ -1,0 +1,106 @@
+#pragma kernel CSMain
+
+Texture2D<float4> Input;
+RWTexture2D<float4> Result;
+SamplerState sampler_LinearClamp;
+
+struct GradientColorKey
+{
+    float4 color;
+    float time;
+};
+struct GradientAlphaKey
+{
+    float alpha;
+    float time;
+};
+
+StructuredBuffer<GradientColorKey> _ColorKeys;
+StructuredBuffer<GradientAlphaKey> _AlphaKeys;
+
+int _ColorKeysLength;
+int _AlphaKeysLength;
+int _OutlineWidth;
+
+
+half luminance(half4 color)
+{
+    return 0.2125 * color.r + 0.7154 * color.g + 0.0721 * color.b;
+}
+
+[numthreads(8, 8, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    uint width, height;
+    Input.GetDimensions(width, height);
+    float2 uv = float2((float)id.x / width, (float)id.y / height);
+
+    // Sobel边缘检测算子
+    // int3x3 sobelX = int3x3(-1, 0, 1, -2, 0, 2, -1, 0, 1);
+    // int3x3 sobelY = int3x3(-1, -2, -1, 0, 0, 0, 1, 2, 1);
+
+    float gx = 0;
+    float gy = 0;
+
+    for (int y = -_OutlineWidth; y <= _OutlineWidth; y++)
+    {
+        for (int x = -_OutlineWidth; x <= _OutlineWidth; x++)
+        {
+            float2 offset = float2(x, y) / float2(width, height);
+            // float4 neighborColor = Input.SampleLevel(sampler_LinearClamp, uv + offset, 0);
+            float4 neighborColor = Input[id.xy + uint2(x, y)];
+
+            // 计算动态Sobel算子的权重
+            float weightX = x / (float)_OutlineWidth;
+            float weightY = y / (float)_OutlineWidth;
+
+            gx += neighborColor.a * weightX;
+            gy += neighborColor.a * weightY;
+        }
+    }
+    float edge = 1 - abs(gx) - abs(gy);
+    edge = 1 - saturate(edge);
+
+    float uvY = uv.y;
+
+
+    GradientColorKey colorKeyFirst = _ColorKeys[0];
+    GradientColorKey colorKeyLast = _ColorKeys[_ColorKeysLength - 1];
+
+    GradientAlphaKey  alphaKeyFirst = _AlphaKeys[0];
+    GradientAlphaKey  alphaKeyLast = _AlphaKeys[_AlphaKeysLength - 1];
+
+
+    float4 outLineColor = uvY < colorKeyFirst.time ? colorKeyFirst.color : colorKeyLast.color;
+    // 计算渐变
+    for (int i = 0; i < _ColorKeysLength - 1; i++)
+    {
+        if (uvY >= _ColorKeys[i].time && uvY <= _ColorKeys[i + 1].time)
+        {
+            float gradient = smoothstep(_ColorKeys[i].time, _ColorKeys[i + 1].time, uvY);
+            outLineColor = lerp(_ColorKeys[i].color, _ColorKeys[i + 1].color, gradient);
+            break;
+        }
+    }
+
+    float4 outLineAalpha = uvY < alphaKeyFirst.time ? alphaKeyFirst.alpha : alphaKeyLast.alpha;
+    for (int j = 0; j < _AlphaKeysLength - 1; j++)
+    {
+        if (uvY >= _AlphaKeys[j].time && uvY <= _AlphaKeys[j + 1].time)
+        {
+            float gradient = smoothstep(_AlphaKeys[j].time, _AlphaKeys[j + 1].time, uvY);
+            outLineAalpha = lerp(_AlphaKeys[j].alpha, _AlphaKeys[j + 1].alpha, gradient);
+            break;
+        }
+    }
+
+
+
+    float4 color = Input[id.xy];
+    color = lerp(color, outLineColor, edge);
+    color.a = lerp(color.a, outLineAalpha, edge);
+
+    color.rgb *= color.a;
+
+    Result[id.xy] = color;
+}
