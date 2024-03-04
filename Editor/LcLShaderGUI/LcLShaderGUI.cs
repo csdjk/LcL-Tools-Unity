@@ -24,7 +24,7 @@ namespace LcLShaderEditor
             // List<FoldoutNode> children = new List<FoldoutNode>();
             public string foldoutName;
             public bool foldoutState;
-            public bool isFoldoutHeader => pos == FoldoutPosition.Start;
+            public bool IsFoldoutHeader => pos == FoldoutPosition.Start;
             public MaterialProperty property;
             public FoldoutPosition pos = FoldoutPosition.None;
             public int indentLevel;
@@ -69,7 +69,7 @@ namespace LcLShaderEditor
 
             public bool IsDisplay()
             {
-                if (isFoldoutHeader)
+                if (IsFoldoutHeader)
                 {
                     if (parent == null)
                     {
@@ -96,9 +96,9 @@ namespace LcLShaderEditor
         }
 
         static Material m_CopiedProperties;
-        static SerializedObject serializedObject;
-        static Stack<FoldoutNode> foldoutStack = new Stack<FoldoutNode>();
-        static List<FoldoutNode> foldoutNodeList = new List<FoldoutNode>();
+        static SerializedObject m_SerializedObject;
+        static Stack<FoldoutNode> m_FoldoutStack = new Stack<FoldoutNode>();
+        static List<FoldoutNode> m_FoldoutNodeList = new List<FoldoutNode>();
 
         static void GetAttr(string attr, out string className, out string args)
         {
@@ -118,23 +118,23 @@ namespace LcLShaderEditor
 
         static bool IsDisplayProp(string propName)
         {
-            float foldoutValue = serializedObject.GetHiddenPropertyFloat(propName);
+            float foldoutValue = m_SerializedObject.GetHiddenPropertyFloat(propName);
             return foldoutValue > 0;
         }
 
 
         override public void OnGUI(MaterialEditor materialEditor, MaterialProperty[] properties)
         {
-            foldoutStack.Clear();
-            foldoutNodeList.Clear();
+            m_FoldoutStack.Clear();
+            m_FoldoutNodeList.Clear();
             var material = materialEditor.target as Material;
-            serializedObject = new SerializedObject(material);
+            m_SerializedObject = new SerializedObject(material);
 
             InitNodeList(properties, material);
             DrawPropertiesDefaultGUI(materialEditor);
             DrawPropertiesContextMenu(materialEditor);
 
-            serializedObject.Dispose();
+            m_SerializedObject.Dispose();
         }
         public static void InitNodeList(MaterialProperty[] properties, Material material)
         {
@@ -159,26 +159,26 @@ namespace LcLShaderEditor
                 }
                 var node = new FoldoutNode(prop, pos)
                 {
-                    indentLevel = foldoutStack.Count
+                    indentLevel = m_FoldoutStack.Count
                 };
 
                 if (pos == FoldoutPosition.Start)
                 {
                     node.SetFoldoutName(ShaderEditorHandler.GetFoldoutPropName(prop.name));
-                    node.parent = foldoutStack.TryPeek(out var parent) ? parent : null;
-                    foldoutStack.Push(node);
+                    node.parent = m_FoldoutStack.TryPeek(out var parent) ? parent : null;
+                    m_FoldoutStack.Push(node);
                 }
                 else if (pos == FoldoutPosition.End)
                 {
-                    var parent = foldoutStack.Pop();
+                    var parent = m_FoldoutStack.Pop();
                     node.SyncState(parent);
                     node.parent = parent;
                 }
                 else
                 {
-                    if (foldoutStack.Count > 0)
+                    if (m_FoldoutStack.Count > 0)
                     {
-                        var parent = foldoutStack.Peek();
+                        var parent = m_FoldoutStack.Peek();
                         node.SyncState(parent);
                         node.parent = parent;
                     }
@@ -187,11 +187,11 @@ namespace LcLShaderEditor
                         node.SetFoldoutName("");
                     }
                 }
-                foldoutNodeList.Add(node);
+                m_FoldoutNodeList.Add(node);
             }
         }
 
-        private static int s_ControlHash = "EditorTextField".GetHashCode();
+        private static int m_ControlHash = "EditorTextField".GetHashCode();
 
         public void DrawPropertiesDefaultGUI(MaterialEditor materialEditor)
         {
@@ -207,10 +207,10 @@ namespace LcLShaderEditor
                 }
                 else
                 {
-                    GUIUtility.GetControlID(s_ControlHash, FocusType.Passive, new Rect(0f, 0f, 0f, 0f));
+                    GUIUtility.GetControlID(m_ControlHash, FocusType.Passive, new Rect(0f, 0f, 0f, 0f));
                 }
             }
-            foreach (var node in foldoutNodeList)
+            foreach (var node in m_FoldoutNodeList)
             {
                 if (node.pos == FoldoutPosition.Start)
                 {

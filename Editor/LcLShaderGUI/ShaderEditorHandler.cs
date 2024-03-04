@@ -41,7 +41,7 @@ namespace LcLShaderEditor
 #endif
         };
         static GUIStyle m_ToggleStyle;
-        static GUIStyle toggleStyle
+        static GUIStyle ToggleStyle
         {
             get
             {
@@ -50,7 +50,7 @@ namespace LcLShaderEditor
             }
         }
         static GUIStyle m_ToggleMixedStyle;
-        static GUIStyle toggleMixedStyle
+        static GUIStyle ToggleMixedStyle
         {
             get
             {
@@ -95,7 +95,7 @@ namespace LcLShaderEditor
             if (hasToggle)
             {
                 GUI.Toggle(toggleRect, EditorGUI.showMixedValue ? false : toggleValue, String.Empty,
-                           EditorGUI.showMixedValue ? toggleMixedStyle : toggleStyle);
+                           EditorGUI.showMixedValue ? ToggleMixedStyle : ToggleStyle);
             }
 
             return isFolding;

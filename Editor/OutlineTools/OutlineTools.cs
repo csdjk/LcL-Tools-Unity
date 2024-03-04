@@ -10,7 +10,7 @@ using LcLTools;
 
 public class OutlineTools : EditorWindow
 {
-    [MenuItem("Tools/OutlineTools")]
+    [MenuItem("LcLTools/OutlineTools")]
     private static void ShowWindow()
     {
         var window = GetWindow<OutlineTools>();

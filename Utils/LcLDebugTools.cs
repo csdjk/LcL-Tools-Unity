@@ -551,7 +551,7 @@ namespace LcLTools
                             break;
                     }
                 }
-                
+
                 object res;
                 res = method.Invoke(this, paramList);
 
@@ -587,12 +587,6 @@ namespace LcLTools
         }
         // ================================ Button Function ================================
 
-        public bool EnableCloudShadow(string path)
-        {
-            // 根据path 获取CloudShadow组件
-            var cloudShadow = GameObject.Find(path).GetComponent<CloudShadow>();
-            cloudShadow.enabled = !cloudShadow.enabled;
-            return cloudShadow.enabled;
-        }
+
     }
 }

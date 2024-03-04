@@ -5,12 +5,12 @@ using UnityEngine;
 /// </summary>
 internal class LightDirDrawer : MaterialPropertyDrawer
 {
-    float height = 16;
-    bool isEditor = false;
-    bool starEditor = true;
-    GameObject selectGameObj;
+    float m_Height = 16;
+    bool m_IsEditor = false;
+    bool m_StarEditor = true;
+    GameObject m_SelectGameObj;
     public Quaternion rot = Quaternion.identity;
-    MaterialProperty m_prop;
+    MaterialProperty m_Prop;
     static bool IsPropertyTypeSuitable(MaterialProperty prop)
     {
         return prop.type == MaterialProperty.PropType.Vector;
@@ -22,8 +22,8 @@ internal class LightDirDrawer : MaterialPropertyDrawer
         {
             return 40f;
         }
-        height = EditorGUI.GetPropertyHeight(SerializedPropertyType.Vector3, new GUIContent(label));
-        return height;
+        m_Height = EditorGUI.GetPropertyHeight(SerializedPropertyType.Vector3, new GUIContent(label));
+        return m_Height;
     }
     public override void OnGUI(Rect position, MaterialProperty prop, string label, MaterialEditor editor)
     {
@@ -41,7 +41,7 @@ internal class LightDirDrawer : MaterialPropertyDrawer
         EditorGUIUtility.labelWidth = 0f;
 
         Color oldColor = GUI.color;
-        if (isEditor) GUI.color = Color.green;
+        if (m_IsEditor) GUI.color = Color.green;
 
         //绘制属性
         Rect VectorRect = new Rect(position)
@@ -57,18 +57,18 @@ internal class LightDirDrawer : MaterialPropertyDrawer
             width = 60f,
             height = 18
         };
-        isEditor = GUI.Toggle(ToggleRect, isEditor, "Edit", "Button");
-        if (isEditor)
+        m_IsEditor = GUI.Toggle(ToggleRect, m_IsEditor, "Edit", "Button");
+        if (m_IsEditor)
         {
-            if (starEditor)
+            if (m_StarEditor)
             {
-                m_prop = prop;
+                m_Prop = prop;
                 InitSceneGUI(value);
             }
         }
         else
         {
-            if (!starEditor)
+            if (!m_StarEditor)
             {
                 ClearSceneGUI();
             }
@@ -85,40 +85,40 @@ internal class LightDirDrawer : MaterialPropertyDrawer
     void InitSceneGUI(Vector3 value)
     {
         Tools.current = Tool.None;
-        selectGameObj = Selection.activeGameObject;
-        if (selectGameObj == null)
+        m_SelectGameObj = Selection.activeGameObject;
+        if (m_SelectGameObj == null)
         {
             return;
         }
-        Vector3 worldDir = selectGameObj.transform.rotation * value;
+        Vector3 worldDir = m_SelectGameObj.transform.rotation * value;
         rot = Quaternion.FromToRotation(Vector3.forward, worldDir);
         SceneView.duringSceneGui += OnSceneGUI;
-        starEditor = false;
+        m_StarEditor = false;
     }
     void ClearSceneGUI()
     {
 
         SceneView.duringSceneGui -= OnSceneGUI;
-        m_prop = null;
-        selectGameObj = null;
-        starEditor = true;
+        m_Prop = null;
+        m_SelectGameObj = null;
+        m_StarEditor = true;
     }
 
     void OnSceneGUI(SceneView sceneView)
     {
-        if (Selection.activeGameObject != selectGameObj)
+        if (Selection.activeGameObject != m_SelectGameObj)
         {
             ClearSceneGUI();
-            isEditor = false;
+            m_IsEditor = false;
             return;
         }
 
-        Vector3 pos = selectGameObj.transform.position;
+        Vector3 pos = m_SelectGameObj.transform.position;
 
         rot = Handles.RotationHandle(rot, pos);
-        Vector3 newLocalDir = Quaternion.Inverse(selectGameObj.transform.rotation) * rot * Vector3.forward;
+        Vector3 newLocalDir = Quaternion.Inverse(m_SelectGameObj.transform.rotation) * rot * Vector3.forward;
 
-        m_prop.vectorValue = new Vector4(newLocalDir.x, newLocalDir.y, newLocalDir.z);
+        m_Prop.vectorValue = new Vector4(newLocalDir.x, newLocalDir.y, newLocalDir.z);
 
         Handles.color = Color.green;
         Handles.ConeHandleCap(0, pos, rot, HandleUtility.GetHandleSize(pos), EventType.Repaint);
