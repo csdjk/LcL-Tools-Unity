@@ -19,7 +19,8 @@ Material:
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap: {}
-  disabledShaderPasses: []
+  disabledShaderPasses:
+  - LitTest1
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -41,6 +42,7 @@ Material:
     - _HeightCutoff2: 1.2
     - _HeightFactor: 1
     - _Overlay: 0
+    - _PassEnum: 0
     - _Property1: 0
     - _Property2: 0
     - _Property3: 0
