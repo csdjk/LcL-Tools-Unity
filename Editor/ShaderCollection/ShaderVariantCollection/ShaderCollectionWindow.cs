@@ -40,10 +40,9 @@ namespace LcLTools
         private const string shaderCollectButtonClass = "shader-collect-button";
         // shader item box
 
-        // 
+        //
         private const string shaderVariantCollectionName = "AllShaders.shadervariants";
         private const string defaultShaderVariantCollectionPath = "Assets/Resources/Shaders/" + shaderVariantCollectionName;
-        string[] sortTypes = new string[] { "ShaderName", "VariantCount" };
         private ObjectField m_ShaderVariantCollectionField;
         private VisualElement m_LeftContainer;
         private TwoPaneSplitView m_RightContainer;
@@ -186,7 +185,7 @@ namespace LcLTools
         private void DrawLeftContainer()
         {
             m_LeftContainer?.RemoveFromHierarchy();
-            // create scroll view 
+            // create scroll view
             m_LeftContainer = new ScrollView();
             m_LeftContainer.AddToClassList(leftContainerClass);
             m_MainContainer.Add(m_LeftContainer);
@@ -360,7 +359,7 @@ namespace LcLTools
 
         private void OnAddShaderClicked(EventBase evt)
         {
-            // 弹窗ObjectField选择shader，添加到shader list中 
+            // 弹窗ObjectField选择shader，添加到shader list中
             var shader = m_NewShaderField.value as Shader;
             if (shader)
             {
@@ -542,7 +541,7 @@ namespace LcLTools
             variantCount.text = variants.Count.ToString();
         }
 
-        // remove shader variant 
+        // remove shader variant
         private bool RemoveShaderVariant(ShaderVariant shaderVariant)
         {
             collectionMapper.RemoveVariant(shaderVariant);

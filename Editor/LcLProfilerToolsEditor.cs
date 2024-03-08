@@ -125,5 +125,12 @@ namespace LcLTools
             serializedObject.ApplyModifiedProperties();
         }
 
+        [MenuItem("GameObject/LcLTools/Add LcLDebugTools", false, 0)]
+        static void AddLcLDebugTools()
+        {
+            var go = new GameObject("LcLDebugTools", typeof(LcLDebugTools), typeof(LcLProfiler));
+            Selection.activeObject = go;
+            Undo.RegisterCreatedObjectUndo(go, "AddLcLDebugTools");
+        }
     }
 }

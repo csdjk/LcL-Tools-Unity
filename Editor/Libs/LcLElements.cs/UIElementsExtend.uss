@@ -12,41 +12,42 @@ Label {
     height: 25px;
     font-size: 13px;
   }
-  
+
   .table-button:checked {
     background-color: #0087e0;
     font-size: 15px;
   }
-  
+
   .table-button-child {
     justify-content: center;
   }
   /* -----------------End-----------------*/
-  
+
   /* -----------------TextFieldList-----------------*/
   .text-field-list-container {
     flex-direction: row;
     align-items: center;
     align-self: center;
-    /* justify-content: space-around; */
     justify-content: space-between;
+    padding-left: 20px;
+    padding-right: 20px;
     margin-top: 5px;
     margin-bottom: 5px;
     min-height: 20px;
     width: 100%;
   }
-  
+
   .text-field-list-title {
     margin-top: 10px;
     margin-bottom: 10px;
   }
-  
+
   .text-field-list-item {
     margin-left: 10px;
     margin-right: 10px;
     min-width: 50px;
   }
-  
+
   .text-field-list-button-container {
     flex-direction: row;
     align-items: center;
@@ -54,11 +55,101 @@ Label {
     margin-right: 5px;
     min-width: 56px;
   }
-  
+
   .text-field-list-button {
     height: 15px;
     width: 20px;
     margin-left: 5px;
   }
   /* -----------------End-----------------*/
-  
+
+  /* -----------------ObjectFieldList-----------------*/
+  .object-field-list-container {
+    flex-direction: row;
+    align-items: center;
+    align-self: center;
+    justify-content: space-between;
+    padding-left: 20px;
+    padding-right: 20px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    min-height: 20px;
+    width: 100%;
+  }
+
+  .object-field-list-title {
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+  .object-field-list-item {
+    margin-left: 10px;
+    margin-right: 10px;
+    min-width: 50px;
+    max-width: 200px;
+  }
+
+  .object-field-list-button-container {
+    flex-direction: row;
+    align-items: center;
+    margin-left: 5px;
+    margin-right: 5px;
+    min-width: 56px;
+  }
+
+  .object-field-list-button {
+    height: 15px;
+    width: 20px;
+    margin-left: 5px;
+  }
+  /* -----------------End-----------------*/
+
+  /* -----------------Resizable Box-----------------*/
+  .resizable-box-resize-handle-horizontal {
+    cursor: resize-horizontal;
+    background-color: black;
+    position: absolute;
+  }
+  .resizable-box-resize-handle-vertical {
+    cursor: resize-vertical;
+    background-color: black;
+    position: absolute;
+  }
+
+  /* --------------------Grid View--------------------- */
+  .grid-container {
+    width: 100%;
+    height: 100%;
+    margin: 2px;
+  }
+
+  .grid-foldout-content {
+    width: 100%;
+    height: 100%;
+  }
+  .grid-scrollview {
+    padding: 2px;
+    border-color: #202020;
+    border-width: 1px;
+    border-radius: 3px;
+    width: 100%;
+    height: 100%;
+  }
+  .grid-scrollview-content-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .grid-size-field{
+      position: absolute;
+      min-width: 30px;
+      right: 0;
+  }
+  .grid-item:hover {
+    background-color: #383838;
+  }
+
+  .grid-item:focus{
+    background-color: #006eb8;
+  }
+
+

@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45e96be3d2c35104791c1c482a4161c6, type: 3}
+  m_Name: ShaderCollectionAssets
+  m_EditorClassIdentifier: 
+  assetsIncludeFolderList: []
+  assetsExcludeFolderList:
+  - {fileID: 102900000, guid: ae229943c53f66143b3f8fd53437f94c, type: 3}
+  shaderIncludeFolderList: []
+  shaderExcludeShaderList: []
+  passTypeExcludeList: 0b0000000a0000000f00000005000000

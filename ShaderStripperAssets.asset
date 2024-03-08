@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5dab931d65c0114a9eadde88849210d, type: 3}
+  m_Name: ShaderStripperAssets
+  m_EditorClassIdentifier: 
+  Active: 0
+  shaderExcludeShaderList:
+  - {fileID: 4800000, guid: 199187dac283dbe4a8cb1ea611d70c58, type: 3}
+  shaderExcludePassTypeList: 0b0000000a00000005000000
+  variantExcludeList:
+  - rid: 1379681672598650880
+  - rid: 1379681672598650881
+  - rid: 1379681672598650882
+  - rid: 1379681672598650883
+  - rid: 1379681672598650884
+  references:
+    version: 2
+    RefIds:
+    - rid: 1379681672598650880
+      type: {class: VariantStripData, ns: LcLTools, asm: Assembly-CSharp-Editor}
+      data:
+        keyword: STEREO_INSTANCING_ON
+        reservedShaderList: []
+    - rid: 1379681672598650881
+      type: {class: VariantStripData, ns: LcLTools, asm: Assembly-CSharp-Editor}
+      data:
+        keyword: STEREO_MULTIVIEW_ON
+        reservedShaderList: []
+    - rid: 1379681672598650882
+      type: {class: VariantStripData, ns: LcLTools, asm: Assembly-CSharp-Editor}
+      data:
+        keyword: STEREO_CUBEMAP_RENDER_ON
+        reservedShaderList: []
+    - rid: 1379681672598650883
+      type: {class: VariantStripData, ns: LcLTools, asm: Assembly-CSharp-Editor}
+      data:
+        keyword: UNITY_SINGLE_PASS_STEREO
+        reservedShaderList: []
+    - rid: 1379681672598650884
+      type: {class: VariantStripData, ns: LcLTools, asm: Assembly-CSharp-Editor}
+      data:
+        keyword: EDITOR_VISUALIZATION
+        reservedShaderList: []

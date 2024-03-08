@@ -587,6 +587,10 @@ namespace LcLTools
         }
         // ================================ Button Function ================================
 
-
+        public bool FunctionTest()
+        {
+            Debug.Log("Function Test");
+            return false;
+        }
     }
 }

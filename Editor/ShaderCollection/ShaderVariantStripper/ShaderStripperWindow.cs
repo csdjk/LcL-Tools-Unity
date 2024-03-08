@@ -30,7 +30,6 @@ namespace LcLTools
         private VisualElement m_ConfigContainerBox;
 
         [SerializeField]
-        private ShaderVariantCollectionMapper mCollectionMapper;
 
         // [MenuItem("LcLTools/Shader变体剔除")]
         private static void ShowWindow()
@@ -42,7 +41,6 @@ namespace LcLTools
 
         private void OnEnable()
         {
-            mCollectionMapper = null;
             VisualElement root = rootVisualElement;
             root.styleSheets.Add(styleSheet);
 

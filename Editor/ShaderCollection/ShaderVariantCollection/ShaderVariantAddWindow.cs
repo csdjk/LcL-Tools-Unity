@@ -25,13 +25,10 @@ namespace LcLTools
         GridView m_SelectedShaderKeywordsGridView;
         ListView m_VariantListView;
         Button m_AddVariantButton;
-
-        private string mMessage;
         Label m_MessageLabel;
         int m_MaxVisibleVariants = 256;
         List<int> m_FilteredVariantTypes = new List<int>();
         List<string[]> m_FilteredVariantKeywords = new List<string[]>();
-        int m_NumFilteredVariants;
         List<int> m_SelectedVariants = new List<int>();
 
         // static ShaderVariantAddWindow Instance = null;
