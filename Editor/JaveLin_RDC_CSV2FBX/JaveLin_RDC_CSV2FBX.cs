@@ -384,7 +384,7 @@ namespace LcLTools
         private static bool has_uv5 = false;
         private static bool has_uv6 = false;
         private static bool has_uv7 = false;
-        private static bool has_color0 = false;
+        private static bool has_color0 = true;
         private static bool useAutoMapping = false;
         private static bool useAllComponent = true;
         private ModelImporterNormals normalImportType = ModelImporterNormals.Import;
@@ -1141,6 +1141,7 @@ namespace LcLTools
 
                 // jave.lin : texcoord0
                 case SemanticType.TEXCOORD0_X:
+                    has_uv0 = true;
                     info.TEXCOORD0_X = float.Parse(data);
                     break;
                 case SemanticType.TEXCOORD0_Y:
@@ -1156,6 +1157,7 @@ namespace LcLTools
 
                 // jave.lin : texcoord1
                 case SemanticType.TEXCOORD1_X:
+                    has_uv1 = true;
                     info.TEXCOORD1_X = float.Parse(data);
                     break;
                 case SemanticType.TEXCOORD1_Y:
@@ -1171,6 +1173,7 @@ namespace LcLTools
 
                 // jave.lin : texcoord2
                 case SemanticType.TEXCOORD2_X:
+                    has_uv2 = true;
                     info.TEXCOORD2_X = float.Parse(data);
                     break;
                 case SemanticType.TEXCOORD2_Y:
@@ -1186,6 +1189,7 @@ namespace LcLTools
 
                 // jave.lin : texcoord3
                 case SemanticType.TEXCOORD3_X:
+                    has_uv3 = true;
                     info.TEXCOORD3_X = float.Parse(data);
                     break;
                 case SemanticType.TEXCOORD3_Y:
@@ -1201,6 +1205,7 @@ namespace LcLTools
 
                 // jave.lin : texcoord4
                 case SemanticType.TEXCOORD4_X:
+                    has_uv4 = true;
                     info.TEXCOORD4_X = float.Parse(data);
                     break;
                 case SemanticType.TEXCOORD4_Y:
@@ -1216,6 +1221,7 @@ namespace LcLTools
 
                 // jave.lin : texcoord5
                 case SemanticType.TEXCOORD5_X:
+                    has_uv5 = true;
                     info.TEXCOORD5_X = float.Parse(data);
                     break;
                 case SemanticType.TEXCOORD5_Y:
@@ -1231,6 +1237,7 @@ namespace LcLTools
 
                 // jave.lin : texcoord6
                 case SemanticType.TEXCOORD6_X:
+                    has_uv6 = true;
                     info.TEXCOORD6_X = float.Parse(data);
                     break;
                 case SemanticType.TEXCOORD6_Y:
@@ -1246,6 +1253,7 @@ namespace LcLTools
 
                 // jave.lin : texcoord7
                 case SemanticType.TEXCOORD7_X:
+                    has_uv7 = true;
                     info.TEXCOORD7_X = float.Parse(data);
                     break;
                 case SemanticType.TEXCOORD7_Y:
@@ -1261,6 +1269,7 @@ namespace LcLTools
 
                 // jave.lin : color0
                 case SemanticType.COLOR0_X:
+                    has_color0 = true;
                     info.COLOR0_X = float.Parse(data);
                     break;
                 case SemanticType.COLOR0_Y:
@@ -1281,10 +1290,23 @@ namespace LcLTools
                     break;
             }
         }
+        void InitVertexInfoWriteSwitch()
+        {
+            has_uv0 = false;
+            has_uv1 = false;
+            has_uv2 = false;
+            has_uv3 = false;
+            has_uv4 = false;
+            has_uv5 = false;
+            has_uv6 = false;
+            has_uv7 = false;
+            has_color0 = false;
+        }
 
         // jave.lin : 根据 csv 来填充 mesh 信息
         private void FillMeshFromCSV(Mesh mesh, string csv, bool is_from_DX_CSV)
         {
+            InitVertexInfoWriteSwitch();
             var line_splitor = new string[] { "\n" };
             var line_element_splitor = new string[] { "," };
 
