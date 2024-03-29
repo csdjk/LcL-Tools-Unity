@@ -27,15 +27,11 @@ namespace LcLShaderEditor
                     {
                         case SurfaceType.Opaque:
                             material.SetOverrideTag("RenderType", "Opaque");
-                            material.SetInt("_ZWrite", 1);
-                            material.DisableKeyword("_ALPHA_ON");
                             material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Geometry;
                             material.SetShaderPassEnabled("DepthOnly", false);
                             break;
                         case SurfaceType.Transparent:
                             material.SetOverrideTag("RenderType", "Transparent");
-                            material.SetInt("_ZWrite", 0);
-                            material.EnableKeyword("_ALPHA_ON");
                             material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
                             material.SetShaderPassEnabled("DepthOnly", true);
                             break;
