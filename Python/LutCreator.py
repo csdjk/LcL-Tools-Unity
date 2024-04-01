@@ -2,39 +2,47 @@ import numpy as np
 import cv2
 import os
 
-# 创建原始的2D LUT
+
+def make_gray_source_32():
+    """生成步长为32的灰度信息"""
+
+    o = [0]
+    step = 0
+    for _ in range(1, 32):
+        step += 9 if _ % 4 == 0 else 8
+        o.append(step)
+    return o
 
 
-def create_3d_lut():
-    lut_3d = np.zeros((32, 32, 32, 3), dtype=np.uint8)
+def make_lattice(source):
+    """生成大小为32的格子"""
 
-    for b in range(32):
-        for g in range(32):
-            for r in range(32):
-                lut_3d[r, g, b] = [r * 8, g * 8, b * 8]
+    tex2d = np.ndarray((32, 32, 3), dtype=np.uint8)
 
-    return lut_3d
-
-
-def convert_3d_lut_to_2d_horizontal(lut_3d):
-    lut_2d = np.zeros((32, 32 * 32, 3), dtype=np.uint8)
-
-    for i in range(32):
-        for j in range(32):
-            lut_2d[j, 32 * i : 32 * (i + 1)] = lut_3d[i, j, :]
-
-    return lut_2d
+    for _ in range(32):
+        tex2d[0:32, _, 2] = source[_]
+    for _ in range(32):
+        tex2d[_, 0:32, 1] = source[31 - _]
+    return tex2d
 
 
-lut_3d = create_3d_lut()
-lut_2d_horizontal = convert_3d_lut_to_2d_horizontal(lut_3d)
+def genlut32():
 
-lut_2d_horizontal = np.flipud(lut_2d_horizontal)
+    source = make_gray_source_32()
+    lattice = make_lattice(source)
+
+    o = list()
+    for _ in range(32):
+        _lattice = np.copy(lattice)
+        _lattice[0:32, 0:32, 0] = source[_]
+        o.append(_lattice)
+    return np.hstack(o)
+
+
+tex2d = genlut32()
 
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
+file_path = os.path.join(current_dir, "NaturalLut32.png")
 
-file_path = os.path.join(current_dir, "original_lut.png")
-cv2.imwrite(file_path, lut_2d_horizontal)
-
-print(file_path)
+cv2.imwrite(file_path, tex2d)
