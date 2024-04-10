@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEditor;
 #if FBX_EXPORTER
@@ -867,7 +868,7 @@ namespace LcLTools
         {
             if (RDC_Text_Asset != null)
             {
-                try
+                // try
                 {
                     MappingSemanticsTypeByNames(ref semanticTypeDict_key_name_helper);
                     var parent = GetParentTrans();
@@ -953,10 +954,10 @@ namespace LcLTools
                     // jave.lin : 打印打出成功的信息
                     Debug.Log($"Export FBX Successfully! outputPath : {outputFullName}");
                 }
-                catch (Exception er)
-                {
-                    Debug.LogError($"Export FBX Failed! er: {er}");
-                }
+                // catch (Exception er)
+                // {
+                //     Debug.LogError($"Export FBX Failed! er: {er}");
+                // }
             }
         }
 
@@ -1346,42 +1347,22 @@ namespace LcLTools
 
             // jave.lin : 先根据 IDX 来排序还原 vertex buffer 的内容
             // lines[1~count-1] : 比如： 0, 0,  0.0402, -1.57095E-17,  0.12606, -0.97949,  0.00, -0.20056,  0.00,  0.1098,  0.83691, -0.53613,  1.00, -0.06058,  0.81738
-
             Dictionary<int, VertexInfo> vertex_dict_key_idx = new Dictionary<int, VertexInfo>();
 
-            var indices = new List<int>();
-
-            var min_idx = int.MaxValue;
+            var idxList = new List<int>();
             for (int i = 1; i < lines.Length; i++)
             {
                 var line = lines[i];
                 var linesElements = line.Split(line_element_splitor, StringSplitOptions.RemoveEmptyEntries);
 
-                // jave.lin : 第几个顶点索引（0~count-1)
                 var idx = int.Parse(linesElements[1]);
-                if (min_idx > idx)
-                {
-                    min_idx = idx;
-                }
-            }
-
-            for (int i = 1; i < lines.Length; i++)
-            {
-                var line = lines[i];
-                var linesElements = line.Split(line_element_splitor, StringSplitOptions.RemoveEmptyEntries);
-
-                // jave.lin : 第几个顶点索引（0~count-1)
-                var idx = int.Parse(linesElements[1]) - min_idx;
-
-                // jave.lin : indices 缓存索引数据的添加
-                indices.Add(idx);
 
                 // jave.lin : 如果该 vertex 没有处理过，那么才去处理
                 if (!vertex_dict_key_idx.TryGetValue(idx, out VertexInfo info))
                 {
                     info = new VertexInfo();
                     vertex_dict_key_idx[idx] = info;
-
+                    idxList.Add(idx);
                     // jave.lin : loop to fill the a2v field
                     for (int j = 0; j < linesElements.Length; j++)
                     {
@@ -1390,6 +1371,7 @@ namespace LcLTools
                     }
                 }
             }
+            idxList.Sort();
 
             // jave.lin : 缩放、旋转、平移
             var rotation = Quaternion.Euler(vertexRotation);
@@ -1399,7 +1381,7 @@ namespace LcLTools
             // https://blog.csdn.net/linjf520/article/details/107501215
             var M_IT_mat = Matrix4x4.TRS(Vector3.zero, rotation, vertexScale).inverse.transpose;
 
-            // jave.lin : composite the data （最后就是我们要组合数据，统一赋值给 mesh）
+
             var vertices = new Vector3[vertex_dict_key_idx.Count];
             var normals = new Vector3[vertex_dict_key_idx.Count];
             var tangents = new Vector4[vertex_dict_key_idx.Count];
@@ -1413,22 +1395,36 @@ namespace LcLTools
             var uv8 = new Vector2[vertex_dict_key_idx.Count];
             var color0 = new Color[vertex_dict_key_idx.Count];
 
-            // jave.lin : 根据 0~count 的索引顺序来组织相关的 vertex 数据
-            for (int idx = 0; idx < vertices.Length; idx++)
+            Dictionary<int, int> vertexIdxIndex = new Dictionary<int, int>();
+            for (int i = 0; i < idxList.Count; i++)
             {
+                var idx = idxList[i];
+                vertexIdxIndex[idx] = i;
+
                 var info = vertex_dict_key_idx[idx];
-                vertices[idx] = TRS_mat * info.POSITION_H;
-                normals[idx] = M_IT_mat * info.NORMAL;
-                tangents[idx] = info.TANGENT;
-                uv[idx] = info.TEXCOORD0;
-                uv2[idx] = info.TEXCOORD1;
-                uv3[idx] = info.TEXCOORD2;
-                uv4[idx] = info.TEXCOORD3;
-                uv5[idx] = info.TEXCOORD4;
-                uv6[idx] = info.TEXCOORD5;
-                uv7[idx] = info.TEXCOORD6;
-                uv8[idx] = info.TEXCOORD7;
-                color0[idx] = info.COLOR0;
+                vertices[i] = TRS_mat * info.POSITION_H;
+                normals[i] = M_IT_mat * info.NORMAL;
+                tangents[i] = info.TANGENT;
+                uv[i] = info.TEXCOORD0;
+                uv2[i] = info.TEXCOORD1;
+                uv3[i] = info.TEXCOORD2;
+                uv4[i] = info.TEXCOORD3;
+                uv5[i] = info.TEXCOORD4;
+                uv6[i] = info.TEXCOORD5;
+                uv7[i] = info.TEXCOORD6;
+                uv8[i] = info.TEXCOORD7;
+                color0[i] = info.COLOR0;
+            }
+
+            var indices = new List<int>();
+            //todo:lcl
+            // 修复中间顶点序号不连续的问题
+            for (int i = 1; i < lines.Length; i++)
+            {
+                var line = lines[i];
+                var linesElements = line.Split(line_element_splitor, StringSplitOptions.RemoveEmptyEntries);
+                var idx = int.Parse(linesElements[1]);
+                indices.Add(vertexIdxIndex[idx]);
             }
 
             // jave.lin : 设置 mesh 信息
@@ -1462,7 +1458,7 @@ namespace LcLTools
                     // nop
                     break;
                 case ModelImporterNormals.Import:
-                    mesh.normals = normals;
+                    mesh.normals = normals.ToArray();
                     break;
                 case ModelImporterNormals.Calculate:
                     mesh.RecalculateNormals();
@@ -1478,7 +1474,7 @@ namespace LcLTools
                     // nop
                     break;
                 case ModelImporterTangents.Import:
-                    mesh.tangents = tangents;
+                    mesh.tangents = tangents.ToArray();
                     break;
                 case ModelImporterTangents.CalculateLegacy:
                 case ModelImporterTangents.CalculateLegacyWithSplitTangents:
