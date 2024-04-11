@@ -370,7 +370,7 @@ namespace LcLTools
         // jave.lin : on_gui - options
         private Vector2 optionsScrollPos;
         private static bool options_show = true;
-        private static bool is_from_DX_CSV = true;
+        private static bool is_from_DX_CSV = false;
         private static Vector3 vertexOffset = Vector3.zero;
         private static Vector3 vertexRotation = Vector3.zero;
         private static Vector3 vertexScale = Vector3.one;
