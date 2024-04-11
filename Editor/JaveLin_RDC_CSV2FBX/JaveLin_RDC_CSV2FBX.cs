@@ -529,6 +529,28 @@ namespace LcLTools
             return SemanticType.Unknown;
         }
 
+        //快速从字符串中提取Vector3
+        public Vector3 ExtractVector3FromData(string data,Vector3 offset)
+        {
+            if (data == string.Empty)
+                return offset;
+
+            string[] splitData = data.Split(new char[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
+
+            List<float> list = new List<float>();
+            foreach (var item in splitData)
+            {
+                if(float.TryParse(item,out float value))
+                {
+                    list.Add(value);
+                }
+            }
+            if(list.Count < 3)
+            {
+                return offset;
+            }
+            return new Vector3(list[0], list[1], list[2]);
+        }
 
         private bool refresh_data = false;
         private bool csv_asset_changed = false;
@@ -615,7 +637,12 @@ namespace LcLTools
                 is_from_DX_CSV = EditorGUILayout.Toggle("Is From DirectX CSV", is_from_DX_CSV);
                 is_reverse_vertex_order = EditorGUILayout.Toggle("Is Reverse Normal", is_reverse_vertex_order);
                 is_recalculate_bound = EditorGUILayout.Toggle("Is Recalculate AABB", is_recalculate_bound);
+
+
+                var offset = EditorGUILayout.TextField("从String中提取Offset",string.Empty);
+                vertexOffset = ExtractVector3FromData(offset,vertexOffset);
                 vertexOffset = EditorGUILayout.Vector3Field("Vertex Offset", vertexOffset);
+
                 vertexRotation = EditorGUILayout.Vector3Field("Vertex Rotation", vertexRotation);
                 vertexScale = EditorGUILayout.Vector3Field("Vertex Scale", vertexScale);
                 // jave.lin : has_uv0,1,2,3,4,5,6,7
