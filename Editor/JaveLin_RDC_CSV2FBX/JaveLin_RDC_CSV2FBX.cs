@@ -4,9 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEditor;
-#if FBX_EXPORTER
 using UnityEditor.Formats.Fbx.Exporter;
-#endif
 
 using UnityEngine;
 namespace LcLTools
@@ -17,10 +15,8 @@ namespace LcLTools
     {
         static CheckFBXSupport()
         {
-            // AssetDatabase.AllowAutoRefresh();
             CheckAndAddFBXSupport();
-            // AssetDatabase.DisallowAutoRefresh();
-            LcL_RenderingPipelineDefines.AddDefine("FBX_EXPORTER");
+            // LcL_RenderingPipelineDefines.AddDefine("FBX_EXPORTER");
         }
 
 
@@ -36,7 +32,6 @@ namespace LcLTools
             }
         }
     }
-#if FBX_EXPORTER
 
     public class JaveLin_RDC_CSV2FBX : EditorWindow
     {
@@ -530,7 +525,7 @@ namespace LcLTools
         }
 
         //快速从字符串中提取Vector3
-        public Vector3 ExtractVector3FromData(string data,Vector3 offset)
+        public Vector3 ExtractVector3FromData(string data, Vector3 offset)
         {
             if (data == string.Empty)
                 return offset;
@@ -540,12 +535,12 @@ namespace LcLTools
             List<float> list = new List<float>();
             foreach (var item in splitData)
             {
-                if(float.TryParse(item,out float value))
+                if (float.TryParse(item, out float value))
                 {
                     list.Add(value);
                 }
             }
-            if(list.Count < 3)
+            if (list.Count < 3)
             {
                 return offset;
             }
@@ -639,8 +634,8 @@ namespace LcLTools
                 is_recalculate_bound = EditorGUILayout.Toggle("Is Recalculate AABB", is_recalculate_bound);
 
 
-                var offset = EditorGUILayout.TextField("从String中提取Offset",string.Empty);
-                vertexOffset = ExtractVector3FromData(offset,vertexOffset);
+                var offset = EditorGUILayout.TextField("从String中提取Offset", string.Empty);
+                vertexOffset = ExtractVector3FromData(offset, vertexOffset);
                 vertexOffset = EditorGUILayout.Vector3Field("Vertex Offset", vertexOffset);
 
                 vertexRotation = EditorGUILayout.Vector3Field("Vertex Rotation", vertexRotation);
@@ -1511,12 +1506,8 @@ namespace LcLTools
                 default:
                     break;
             }
-
-            //// jave.lin : 打印一下
-            //Debug.Log("FillMeshFromCSV done!");
         }
 
-#endif
 
     }
 }

@@ -49,16 +49,26 @@ namespace LcLTools
         {
             path = path.ToLower();
             string pattern = @"\.(fbx|obj)$";
-            string[] arr = path.Split(' ');
-            foreach (string s in arr)
+
+            var name = Path.GetFileName(path);
+
+            bool result = Regex.IsMatch(name, pattern);
+            if (!result)
             {
-                bool result = Regex.IsMatch(s, pattern);
-                if (!result)
-                {
-                    EditorUtility.DisplayDialog("提示", "包含非模型文件!", "确定");
-                    return true;
-                }
+                EditorUtility.DisplayDialog("提示", "包含非模型文件!", "确定");
+                return true;
             }
+
+            // string[] arr = path.Split(' ');
+            // foreach (string s in arr)
+            // {
+            //     bool result = Regex.IsMatch(s, pattern);
+            //     if (!result)
+            //     {
+            //         EditorUtility.DisplayDialog("提示", "包含非模型文件!", "确定");
+            //         return true;
+            //     }
+            // }
             return false;
         }
 
