@@ -371,7 +371,7 @@ namespace LcLTools
         private static Vector3 vertexScale = Vector3.one;
         private static bool is_reverse_vertex_order = false; // jave.lin : for reverse normal
         private static bool is_recalculate_bound = true;
-        private static SemanticMappingType semanticMappingType = SemanticMappingType.Default;
+        private static SemanticMappingType semanticMappingType = SemanticMappingType.ManuallyMapping;
         private static bool has_uv0 = true;
         private static bool has_uv1 = false;
         private static bool has_uv2 = false;
@@ -381,7 +381,7 @@ namespace LcLTools
         private static bool has_uv6 = false;
         private static bool has_uv7 = false;
         private static bool has_color0 = true;
-        private static bool useAutoMapping = false;
+        private static bool useAutoMapping = true;
         private static bool useAllComponent = true;
         private ModelImporterNormals normalImportType = ModelImporterNormals.Import;
         private ModelImporterTangents tangentImportType = ModelImporterTangents.Import;
