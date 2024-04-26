@@ -67,14 +67,14 @@ namespace LcLTools
                 }
                 if (EditorGUI.EndChangeCheck())
                 {
-                    if (highConsumptionProp.boolValue)
-                    {
-                        HeavyPostProcessingFeature.Enable(highIterationsProp.intValue);
-                    }
-                    else
-                    {
-                        HeavyPostProcessingFeature.Disable();
-                    }
+                    // if (highConsumptionProp.boolValue)
+                    // {
+                    //     HeavyPostProcessingFeature.Enable(highIterationsProp.intValue);
+                    // }
+                    // else
+                    // {
+                    //     HeavyPostProcessingFeature.Disable();
+                    // }
                 }
             }
             EditorGUILayout.EndHorizontal();
