@@ -1,4 +1,4 @@
-Shader "lcl/Debugger"
+Shader "LcL/Debugger"
 {
     Properties
     {

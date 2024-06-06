@@ -1,5 +1,5 @@
 ﻿// LcLShaderGUI
-Shader "lcl/ShaderGUI/LcLShaderGUI"
+Shader "LcL/ShaderGUI/LcLShaderGUI"
 {
     Properties
     {
