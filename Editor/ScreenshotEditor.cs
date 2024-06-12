@@ -4,6 +4,7 @@ using UnityEngine.UIElements;
 using System.Linq;
 using System;
 using System.IO;
+using UnityEditor.SceneManagement;
 using UnityEditor.UIElements;
 
 namespace LcLTools
@@ -37,7 +38,7 @@ namespace LcLTools
 
         private static ImageFormat textureFormat = ImageFormat.PNG;
         private static MsaaScale msaaScale = MsaaScale.X8;
-        private static string path = "Assets/Screenshot/screenshot.png";
+        private static string path = "Assets/Screenshot";
 
         static Camera ScreenCaptureCamera
         {
@@ -157,13 +158,7 @@ namespace LcLTools
 
         public void OpenFile()
         {
-            string file = EditorUtility.OpenFolderPanel("选择文件夹", Application.dataPath, "");
-            if (file != "")
-            {
-                pathField.value = $"{file}/screenshot.png";
-            }
-
-            Debug.Log(file);
+            pathField.value = EditorUtility.OpenFolderPanel("选择文件夹", Application.dataPath, "");
         }
 
 
@@ -201,18 +196,24 @@ namespace LcLTools
                 : (ImageFormat)textureFormatField.value;
             string filePath = pathField?.value == null ? path : pathField.value;
 
+            var time = DateTime.Now.ToString("yyyyMMddHHmmss");
+            var sceneName = EditorSceneManager.GetActiveScene().name;
+
             byte[] bytes;
             switch (format)
             {
                 case ImageFormat.PNG:
-                    filePath = filePath.Replace(Path.GetExtension(filePath), ".png");
+                    // filePath = filePath.Replace(Path.GetExtension(filePath), ".png");
+                    filePath = Path.Combine(filePath, $"{sceneName}_{time}.png");
                     bytes = tex.EncodeToPNG();
                     break;
                 case ImageFormat.TGA:
-                    filePath = filePath.Replace(Path.GetExtension(filePath), ".tga");
+                    // filePath = filePath.Replace(Path.GetExtension(filePath), ".tga");
+                    filePath = Path.Combine(filePath, $"{sceneName}_{time}.tga");
                     bytes = tex.EncodeToTGA();
                     break;
                 default:
+                    filePath = Path.Combine(filePath, $"{sceneName}_{time}.jpg");
                     bytes = tex.EncodeToJPG();
                     break;
             }
@@ -226,8 +227,6 @@ namespace LcLTools
 
             File.WriteAllBytes(filePath, bytes);
             AssetDatabase.ImportAsset(filePath);
-
-            // var outputPath = saveDirPath.Replace("Assets/..", "") + DateTime.Now.ToString($"{x}x{y}_yyyy_MM_dd_HH_mm_ss") + ".png";
 
             TextureImporter importer = AssetImporter.GetAtPath(filePath) as TextureImporter;
             importer.alphaIsTransparency = true;
