@@ -28,8 +28,9 @@ public class AnimationToFramesEditor : Editor
         }
         if (EditorGUI.EndChangeCheck())
         {
-            GameViewUtils.GetWindow();
+            GameViewUtils.OpenWindow();
             GameViewUtils.SetSize(selectDisplayIndex);
+            GameViewUtils.SetMinScale();
         }
 
         var list = tools.GetAnimatorClip();
@@ -46,7 +47,7 @@ public class AnimationToFramesEditor : Editor
 
         if (GUILayout.Button("渲染序列帧动画"))
         {
-            GameViewUtils.GetWindow();
+            GameViewUtils.OpenWindow();
             tools.Capture();
         }
     }

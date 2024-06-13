@@ -47,7 +47,11 @@ namespace LcLTools
                 Camera camera = cameraField?.value as Camera;
                 if (camera == null)
                 {
-                    camera = Selection.activeGameObject.GetComponent<Camera>();
+                    camera = Selection.activeGameObject?.GetComponent<Camera>();
+                    if (camera == null)
+                    {
+                        camera = GameObject.FindObjectOfType<Camera>();
+                    }
                 }
 
                 return camera;
