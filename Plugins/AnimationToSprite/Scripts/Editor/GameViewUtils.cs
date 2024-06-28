@@ -54,13 +54,6 @@ public static class GameViewUtils
         return EditorWindow.GetWindow(m_GameViewType);
     }
 
-    [MenuItem("Test/SnapZoom")]
-    public static void SnapZoomMin()
-    {
-        SetSize(256, 256);
-        SnapZoom(0.1f);
-    }
-
     public static void SetMinScale()
     {
         SnapZoom((minScale));

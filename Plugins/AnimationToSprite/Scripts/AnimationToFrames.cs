@@ -4,6 +4,7 @@ using System.IO;
 using UnityEditor;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor.Animations;
 
 [ExecuteInEditMode]
 public class AnimationToFrames : MonoBehaviour
@@ -16,18 +17,21 @@ public class AnimationToFrames : MonoBehaviour
     public int frameRate = 16;
     List<string> m_Animations;
     [HideInInspector] public int selectIndex;
-    string AnimationName => m_Animations[selectIndex];
+    public string AnimationName => m_Animations[selectIndex];
     List<string> m_Empty = new List<string>();
     Animator m_Animator;
+    RuntimeAnimatorController m_Controller;
     RenderTexture m_RenderTexture;
     bool m_IsCapturing = false;
     int m_FrameCount = 0;
+    int m_CurrentLayler= 0;
     List<string> m_Paths = new List<string>();
 
     void OnEnable()
     {
         renderCamera = Camera.main ?? FindObjectOfType<Camera>();
         m_Animator = GetComponent<Animator>();
+        m_Controller = m_Animator.runtimeAnimatorController;
     }
 
     void OnDisable()
@@ -39,8 +43,8 @@ public class AnimationToFrames : MonoBehaviour
     {
         if (m_Animator == null) return m_Empty;
 
-        var controller = m_Animator.runtimeAnimatorController;
-        var clips = controller.animationClips;
+        m_Controller = m_Animator.runtimeAnimatorController;
+        var clips = m_Controller.animationClips;
         m_Animations = clips.Select(clip => clip.name).ToList();
         return m_Animations;
     }
@@ -69,16 +73,54 @@ public class AnimationToFrames : MonoBehaviour
         m_IsCapturing = true;
         m_FrameCount = 0;
         m_Paths.Clear();
-        PlayAnimation();
+        // PlayAnimation();
+        PlayAnimationByClipName(AnimationName);
     }
 
-    public void PlayAnimation(int layer = 0, float normalizedTime = 0f)
+    public void PlayAnimation(string stateName, int layer = 0, float normalizedTime = 0f)
     {
         Time.captureFramerate = frameRate;
         m_Animator.speed = 1f;
-        m_Animator.Play(AnimationName, layer, normalizedTime);
+        m_Animator.Play(stateName, layer, normalizedTime);
         EditorApplication.update -= UpdateAnimation;
         EditorApplication.update += UpdateAnimation;
+    }
+
+    public void PlayAnimationByClipName(string clipName, float normalizedTime = 0f)
+    {
+        AnimatorController ac = m_Controller as AnimatorController;
+        string stateName = null;
+        m_CurrentLayler = 0;
+        for (var i = 0; i < ac.layers.Length; i++)
+        {
+            var layer = ac.layers[i];
+            var stateMachine = layer.stateMachine;
+            foreach (var state in stateMachine.states)
+            {
+                if (state.state.motion is AnimationClip clip && clip.name == clipName)
+                {
+                    stateName = state.state.name;
+                    m_CurrentLayler = i;
+                    break;
+                }
+            }
+
+            if (stateName != null) break;
+        }
+
+
+        if (stateName != null)
+        {
+            Time.captureFramerate = frameRate;
+            m_Animator.speed = 1f;
+            m_Animator.Play(stateName, m_CurrentLayler, normalizedTime);
+            EditorApplication.update -= UpdateAnimation;
+            EditorApplication.update += UpdateAnimation;
+        }
+        else
+        {
+            Debug.LogError("Animation clip not found in any state: " + clipName);
+        }
     }
 
     public void StopAnimation()
@@ -86,8 +128,14 @@ public class AnimationToFrames : MonoBehaviour
         EditorApplication.update -= UpdateAnimation;
     }
 
+    float animationStartTime;
+    float animationLength;
     private void UpdateAnimation()
     {
+        // 记录动画开始播放的时间
+        animationStartTime = Time.time;
+        animationLength = m_Animator.GetCurrentAnimatorStateInfo(m_CurrentLayler).length;
+
         m_Animator.Update(Time.deltaTime);
         if (m_IsCapturing)
         {
@@ -125,12 +173,17 @@ public class AnimationToFrames : MonoBehaviour
         m_FrameCount++;
         // 获取 Animator 的当前状态
         AnimatorStateInfo stateInfo = m_Animator.GetCurrentAnimatorStateInfo(0);
-        // 检查动画是否播放完成
-        if (stateInfo.normalizedTime >= 1)
+
+        if (Time.time - animationStartTime >= animationLength)
         {
             // 动画已经播放完成
             CaptureComplete();
         }
+        // if (stateInfo.normalizedTime >= 1)
+        // {
+        //     // 动画已经播放完成
+        //     CaptureComplete();
+        // }
     }
 
 
@@ -163,9 +216,8 @@ public class AnimationToFrames : MonoBehaviour
             return;
         }
 
-        // 设置 alphaIsTransparency 为 true
         importer.alphaIsTransparency = true;
-
+        importer.npotScale = TextureImporterNPOTScale.None;
         // 应用修改
         importer.SaveAndReimport();
     }

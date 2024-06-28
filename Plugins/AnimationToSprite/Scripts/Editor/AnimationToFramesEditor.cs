@@ -14,6 +14,7 @@ public class AnimationToFramesEditor : Editor
     private void OnEnable()
     {
         GameViewUtils.UpdateDisplaySizes();
+        selectDisplayIndex = GameViewUtils.FindSize(Screen.width, Screen.height);
     }
 
     public override void OnInspectorGUI()
@@ -38,10 +39,8 @@ public class AnimationToFramesEditor : Editor
 
         if (GUILayout.Button("预览动画"))
         {
-            tools.PlayAnimation();
+            tools.PlayAnimationByClipName(tools.AnimationName);
             {
-
-
             }
         }
 
