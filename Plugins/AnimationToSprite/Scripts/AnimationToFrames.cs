@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using System.Collections;
 using System.IO;
@@ -18,18 +19,20 @@ public class AnimationToFrames : MonoBehaviour
     List<string> m_Animations;
     [HideInInspector] public int selectIndex;
     public string AnimationName => m_Animations[selectIndex];
+    public AnimationClip[] Clips => m_Controller?.animationClips;
     List<string> m_Empty = new List<string>();
     Animator m_Animator;
     RuntimeAnimatorController m_Controller;
     RenderTexture m_RenderTexture;
     bool m_IsCapturing = false;
     int m_FrameCount = 0;
-    int m_CurrentLayler= 0;
+    int m_CurrentLayler = 0;
+    string m_CurrentStateName;
     List<string> m_Paths = new List<string>();
 
     void OnEnable()
     {
-        renderCamera = Camera.main ?? FindObjectOfType<Camera>();
+        renderCamera = Camera.main ? Camera.main : FindObjectOfType<Camera>();
         m_Animator = GetComponent<Animator>();
         m_Controller = m_Animator.runtimeAnimatorController;
     }
@@ -39,14 +42,26 @@ public class AnimationToFrames : MonoBehaviour
         StopAnimation();
     }
 
+    public AnimationClip GetClipByIndex(int index)
+    {
+        return Clips == null || Clips.Length == 0 ? null : Clips[index];
+    }
+
     public List<string> GetAnimatorClip()
     {
         if (m_Animator == null) return m_Empty;
-
         m_Controller = m_Animator.runtimeAnimatorController;
+        if (m_Controller == null) return m_Empty;
+
         var clips = m_Controller.animationClips;
         m_Animations = clips.Select(clip => clip.name).ToList();
         return m_Animations;
+    }
+
+    public void PreviewAnimation()
+    {
+        m_IsCapturing = false;
+        PlayAnimationByClipName(AnimationName);
     }
 
     public void Capture()
@@ -73,7 +88,6 @@ public class AnimationToFrames : MonoBehaviour
         m_IsCapturing = true;
         m_FrameCount = 0;
         m_Paths.Clear();
-        // PlayAnimation();
         PlayAnimationByClipName(AnimationName);
     }
 
@@ -84,12 +98,16 @@ public class AnimationToFrames : MonoBehaviour
         m_Animator.Play(stateName, layer, normalizedTime);
         EditorApplication.update -= UpdateAnimation;
         EditorApplication.update += UpdateAnimation;
+        // 记录动画开始播放的时间
+        m_AnimationStartTime = Time.time;
+        m_AnimationLength = m_Animator.GetCurrentAnimatorStateInfo(m_CurrentLayler).length;
     }
 
-    public void PlayAnimationByClipName(string clipName, float normalizedTime = 0f)
+    void InitAnimationInfo(string clipName)
     {
         AnimatorController ac = m_Controller as AnimatorController;
-        string stateName = null;
+        if(ac == null) return;
+        m_CurrentStateName = String.Empty;
         m_CurrentLayler = 0;
         for (var i = 0; i < ac.layers.Length; i++)
         {
@@ -99,23 +117,30 @@ public class AnimationToFrames : MonoBehaviour
             {
                 if (state.state.motion is AnimationClip clip && clip.name == clipName)
                 {
-                    stateName = state.state.name;
+                    m_CurrentStateName = state.state.name;
                     m_CurrentLayler = i;
                     break;
                 }
             }
 
-            if (stateName != null) break;
+            if (m_CurrentStateName.Equals(String.Empty)) break;
         }
+    }
 
-
-        if (stateName != null)
+    public void PlayAnimationByClipName(string clipName, float normalizedTime = 0f)
+    {
+        InitAnimationInfo(clipName);
+        if (!m_CurrentStateName.Equals(String.Empty))
         {
             Time.captureFramerate = frameRate;
             m_Animator.speed = 1f;
-            m_Animator.Play(stateName, m_CurrentLayler, normalizedTime);
+            m_Animator.Play(m_CurrentStateName, m_CurrentLayler, normalizedTime);
             EditorApplication.update -= UpdateAnimation;
             EditorApplication.update += UpdateAnimation;
+            // 记录动画开始播放的时间
+            m_AnimationStartTime = Time.time;
+            m_AnimationLength = m_Animator.GetCurrentAnimatorStateInfo(m_CurrentLayler).length;
+            // Debug.Log($"PlayAnimationByClipName: {clipName},length: {animationLength}");
         }
         else
         {
@@ -128,18 +153,22 @@ public class AnimationToFrames : MonoBehaviour
         EditorApplication.update -= UpdateAnimation;
     }
 
-    float animationStartTime;
-    float animationLength;
+    float m_AnimationStartTime;
+    float m_AnimationLength;
+
     private void UpdateAnimation()
     {
-        // 记录动画开始播放的时间
-        animationStartTime = Time.time;
-        animationLength = m_Animator.GetCurrentAnimatorStateInfo(m_CurrentLayler).length;
-
+        // Debug.Log(Time.deltaTime);
         m_Animator.Update(Time.deltaTime);
         if (m_IsCapturing)
         {
             StartCoroutine(CaptureFrame());
+        }
+
+
+        if (Time.time - m_AnimationStartTime >= m_AnimationLength)
+        {
+            StopAnimation();
         }
     }
 
@@ -150,34 +179,24 @@ public class AnimationToFrames : MonoBehaviour
         var path = Path.Combine(outputFolder, $"{AnimationName}_{m_FrameCount}.png");
         m_Paths.Add(path);
         // 捕获屏幕截图，并将其保存为PNG文件
-        // ScreenCapture.CaptureScreenshot(path);
         renderCamera.targetTexture = m_RenderTexture;
         renderCamera.Render();
         RenderTexture.active = m_RenderTexture;
-
-        // 创建一个新的 Texture2D，大小和屏幕一样大
-        var tex = new Texture2D(Width, Height, TextureFormat.ARGB32, false);
         // 读取屏幕像素
+        var tex = new Texture2D(Width, Height, TextureFormat.ARGB32, false);
         tex.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
         tex.Apply();
 
-        // 将 Texture2D 编码为 PNG
         byte[] bytes = tex.EncodeToPNG();
-
-        // 保存 PNG 文件
         File.WriteAllBytes(path, bytes);
-
-        // 销毁 Texture2D
         DestroyImmediate(tex);
 
         m_FrameCount++;
-        // 获取 Animator 的当前状态
-        AnimatorStateInfo stateInfo = m_Animator.GetCurrentAnimatorStateInfo(0);
-
-        if (Time.time - animationStartTime >= animationLength)
+        if (Time.time - m_AnimationStartTime >= m_AnimationLength)
         {
             // 动画已经播放完成
             CaptureComplete();
+            // StopAnimation();
         }
         // if (stateInfo.normalizedTime >= 1)
         // {
@@ -196,19 +215,16 @@ public class AnimationToFrames : MonoBehaviour
         m_RenderTexture = null;
         RenderTexture.active = null;
 
-        //  set import
         AssetDatabase.Refresh();
-
 
         foreach (var path in m_Paths)
         {
-            SetAlphaIsTransparency(path);
+            SetTextureImporter(path);
         }
     }
 
-    void SetAlphaIsTransparency(string path)
+    void SetTextureImporter(string path)
     {
-        // 获取 TextureImporter
         TextureImporter importer = (TextureImporter)AssetImporter.GetAtPath(path);
         if (importer == null)
         {
@@ -218,7 +234,6 @@ public class AnimationToFrames : MonoBehaviour
 
         importer.alphaIsTransparency = true;
         importer.npotScale = TextureImporterNPOTScale.None;
-        // 应用修改
         importer.SaveAndReimport();
     }
 }
