@@ -1,4 +1,3 @@
-using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -116,8 +115,11 @@ public static class ReflectionUtils
             .Select(assembly => assembly.GetType(name))
             .FirstOrDefault(tt => tt != null);
 
-        Assert.True(type != null, "Type not found");
 
+        if (type == null)
+        {
+            throw new InvalidOperationException("Type not found");
+        }
         m_TypeCache[name] = type;
 
         return type;
@@ -130,14 +132,23 @@ public static class ReflectionUtils
     /// <param name="args">The arguments to pass to the method</param>
     public static object InvokeStatic(this Type targetType, string methodName, params object[] args)
     {
-        Assert.True(targetType != null, "Invalid Type");
-        Assert.IsNotEmpty(methodName, "The methodName to set could not be null");
+        if (targetType == null)
+        {
+            throw new ArgumentNullException(nameof(targetType), "Invalid Type");
+        }
 
+        if (string.IsNullOrEmpty(methodName))
+        {
+            throw new ArgumentException("The methodName to set could not be null or empty", nameof(methodName));
+        }
         string key = targetType.FullName + "." + methodName;
         if (!m_MethodCache.ContainsKey(key))
         {
             var mi = targetType.GetMethodCache(methodName, m_BindingFlagsStatic);
-            Assert.True(mi != null, $"Could not find method `{methodName}` on type `{targetType}`");
+            if (mi == null)
+            {
+                throw new InvalidOperationException($"Method '{methodName}' not found in type '{targetType.FullName}'.");
+            }
             m_MethodCache[key] = mi;
         }
 
@@ -151,11 +162,11 @@ public static class ReflectionUtils
     /// <param name="args">The arguments to pass to the method</param>
     public static object Invoke(this object target, string methodName, params object[] args)
     {
-        Assert.True(target != null, "The target could not be null");
-        Assert.IsNotEmpty(methodName, "The method name to set could not be null");
-
+        if (target == null)
+        {
+            throw new ArgumentNullException(nameof(target), "The target could not be null");
+        }
         var mi = target.GetTypeCache().GetMethodCache(methodName, m_BindingFlags);
-        Assert.True(mi != null, $"Could not find method `{methodName}` on object `{target}`");
         return mi.Invoke(target, args);
     }
 
@@ -175,7 +186,10 @@ public static class ReflectionUtils
                 type = type.BaseType;
             }
 
-            Assert.True(fi != null, $"Could not find method `{fieldName}` on object `{type}`");
+            if (fi == null)
+            {
+                throw new InvalidOperationException($"Field '{fieldName}' not found in type '{type.FullName}'.");
+            }
 
             m_FieldCache[key] = fi;
         }
@@ -199,8 +213,10 @@ public static class ReflectionUtils
                 type = type.BaseType;
             }
 
-            Assert.True(pi != null, $"Could not find method `{propertyName}` on object `{type}`");
-
+            if (pi == null)
+            {
+                throw new InvalidOperationException($"Property '{propertyName}' not found in type '{type.FullName}'.");
+            }
             m_PropertyCache[key] = pi;
         }
 
@@ -215,8 +231,6 @@ public static class ReflectionUtils
     /// <param name="value">The new value</param>
     public static void SetField(this object target, string fieldName, object value)
     {
-        Assert.True(target != null, "The target could not be null");
-        Assert.IsNotEmpty(fieldName, "The field to set could not be null");
         target.GetTypeCache().FindField(fieldName).SetValue(target, value);
     }
 
@@ -226,8 +240,6 @@ public static class ReflectionUtils
     /// <param name="fieldName">The field to get</param>
     public static object GetField(this object target, string fieldName)
     {
-        Assert.True(target != null, "The target could not be null");
-        Assert.IsNotEmpty(fieldName, "The field to set could not be null");
         return target.GetTypeCache().FindField(fieldName).GetValue(target);
     }
 
@@ -236,21 +248,16 @@ public static class ReflectionUtils
     /// </summary>
     public static IEnumerable<FieldInfo> GetFields(this object target)
     {
-        Assert.True(target != null, "The target could not be null");
         return target.GetTypeCache().GetFields(m_BindingFlagsInstance).OrderBy(t => t.MetadataToken);
     }
 
     public static void SetProperty(this object target, string propertyName, object value)
     {
-        Assert.True(target != null, "The target could not be null");
-        Assert.IsNotEmpty(propertyName, "The property to set could not be null");
         target.GetTypeCache().FindProperty(propertyName).SetValue(target, value);
     }
 
     public static object GetProperty(this object target, string propertyName)
     {
-        Assert.True(target != null, "The target could not be null");
-        Assert.IsNotEmpty(propertyName, "The property to set could not be null");
         return target.GetTypeCache().FindProperty(propertyName).GetValue(target);
     }
 
@@ -259,8 +266,6 @@ public static class ReflectionUtils
     /// </summary>
     public static IEnumerable<PropertyInfo> GetProperties(this object target)
     {
-        Assert.True(target != null, "The target could not be null");
-
         return target.GetTypeCache().GetProperties(m_BindingFlagsInstance).OrderBy(t => t.MetadataToken);
     }
 }
