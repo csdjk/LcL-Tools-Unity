@@ -1,11 +1,11 @@
-﻿using System;
+﻿
+#if UNITY_EDITOR
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
-
 
 public static class GameViewUtils
 {
@@ -182,3 +182,5 @@ public static class GameViewUtils
         return (GameViewSizeGroupType)(int)getCurrentGroupTypeProp.GetValue(m_GameViewSizesInstance, null);
     }
 }
+
+#endif

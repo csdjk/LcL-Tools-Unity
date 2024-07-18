@@ -1,10 +1,7 @@
-using System.Diagnostics;
 using UnityEngine;
 using System;
 using UnityEditor;
 using UnityEngine.UIElements;
-using UnityEditor.UIElements;
-using System.Text.RegularExpressions;
 
 namespace LcLTools
 {
@@ -49,7 +46,7 @@ namespace LcLTools
                 style = { backgroundColor = attr.enableColor * multiplier }
             };
 
-            // 转换Gamma颜色空间 
+            // 转换Gamma颜色空间
             // 取消button的focus
             button.focusable = false;
             button.clickable = new Clickable((EventBase evt) =>
@@ -64,7 +61,7 @@ namespace LcLTools
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
-            // 绘制button 
+            // 绘制button
             ButtonAttribute attr = (ButtonAttribute)attribute;
             Color defaultColor = EditorStyles.label.normal.textColor;
             var color = GUI.backgroundColor;

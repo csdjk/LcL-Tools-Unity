@@ -1,12 +1,8 @@
 
-using System.CodeDom.Compiler;
 using System;
 using System.Collections.Generic;
-using UnityEditor;
-using UnityEngine;
 using UnityEngine.UIElements;
 using System.Linq;
-using System.Collections;
 using UnityEditor.UIElements;
 namespace LcLTools
 {
@@ -25,7 +21,7 @@ namespace LcLTools
         public Type objectType;
 
         // ---------------------------------------------------------
-        // 把UnityEngine.Object类型改成泛型T 
+        // 把UnityEngine.Object类型改成泛型T
 
 
         public ObjectFieldList(string title, List<T> contentList) : base(null, null)
