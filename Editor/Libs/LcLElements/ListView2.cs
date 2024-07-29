@@ -10,6 +10,43 @@ namespace LcLTools
 {
     public class ListView2 : ListView
     {
+        private readonly string headerRowName = "ListViewHeaderRow";
+        private VisualElement m_HeaderRow;
+
+        VisualElement HeaderRow
+        {
+            get
+            {
+                if (m_HeaderRow == null)
+                {
+                    m_HeaderRow = this.Q<VisualElement>(headerRowName);
+                    if (m_HeaderRow == null)
+                    {
+                        var color = new Color(0, 0, 0, 1);
+                        var width = 1;
+                        m_HeaderRow = new VisualElement()
+                        {
+                            name = headerRowName,
+                            style =
+                            {
+                                borderTopColor = color,
+                                borderLeftColor = color,
+                                borderRightColor = color,
+                                borderTopWidth = width,
+                                borderLeftWidth = width,
+                                borderRightWidth = width,
+                            }
+                        };
+                    }
+                }
+
+                return m_HeaderRow;
+            }
+        }
+
+        public Func<VisualElement> makeHeaderRow { get; set; }
+
+
         private List<VisualElement> m_VisibleElements = new();
 
         public IEnumerable<VisualElement> selectedVisualElements
@@ -29,6 +66,11 @@ namespace LcLTools
             }
         }
 
+        public List<VisualElement> visualElements
+        {
+            get { return this.Query<VisualElement>(className: "unity-list-view__item").ToList(); }
+        }
+
         public ListView2(IList itemsSource, int itemHeight, Func<VisualElement> makeItem, Action<VisualElement, int> bindItem)
             : base(itemsSource, itemHeight, makeItem, bindItem)
         {
@@ -46,8 +88,28 @@ namespace LcLTools
                 bindItem(element, index);
             };
 
-            this.unbindItem = (element, index) => { m_VisibleElements[index] = null; };
+            unbindItem = (element, index) => { m_VisibleElements[index] = null; };
+
+            //Table标题头
+            RegisterCallback<GeometryChangedEvent>(evt =>
+            {
+                if (makeHeaderRow != null && m_HeaderRow == null)
+                {
+                    this.Q<ScrollView>().parent.Insert(0, HeaderRow);
+                    HeaderRow.Add(makeHeaderRow());
+                }
+            });
+            var scrollView = this.Q<ScrollView>();
+            scrollView.verticalScroller.RegisterCallback<GeometryChangedEvent>(evt =>
+            {
+                HeaderRow.style.paddingRight = scrollView.verticalScroller.layout.width;
+            });
+            scrollView.horizontalScroller.RegisterCallback<GeometryChangedEvent>(evt =>
+            {
+                HeaderRow.style.paddingBottom = scrollView.horizontalScroller.layout.height;
+            });
         }
+
 
         public VisualElement GetVisualElementAt(int index)
         {
