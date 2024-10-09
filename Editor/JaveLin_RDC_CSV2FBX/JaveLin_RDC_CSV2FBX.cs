@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEditor;
-#if FBX_EXPORTER
 using UnityEditor.Formats.Fbx.Exporter;
-#endif
 
 using UnityEngine;
 namespace LcLTools
@@ -16,10 +15,8 @@ namespace LcLTools
     {
         static CheckFBXSupport()
         {
-            // AssetDatabase.AllowAutoRefresh();
             CheckAndAddFBXSupport();
-            // AssetDatabase.DisallowAutoRefresh();
-            LcL_RenderingPipelineDefines.AddDefine("FBX_EXPORTER");
+            // LcL_RenderingPipelineDefines.AddDefine("FBX_EXPORTER");
         }
 
 
@@ -35,7 +32,6 @@ namespace LcLTools
             }
         }
     }
-#if FBX_EXPORTER
 
     public class JaveLin_RDC_CSV2FBX : EditorWindow
     {
@@ -369,13 +365,13 @@ namespace LcLTools
         // jave.lin : on_gui - options
         private Vector2 optionsScrollPos;
         private static bool options_show = true;
-        private static bool is_from_DX_CSV = true;
+        private static bool is_from_DX_CSV = false;
         private static Vector3 vertexOffset = Vector3.zero;
         private static Vector3 vertexRotation = Vector3.zero;
         private static Vector3 vertexScale = Vector3.one;
         private static bool is_reverse_vertex_order = false; // jave.lin : for reverse normal
         private static bool is_recalculate_bound = true;
-        private static SemanticMappingType semanticMappingType = SemanticMappingType.Default;
+        private static SemanticMappingType semanticMappingType = SemanticMappingType.ManuallyMapping;
         private static bool has_uv0 = true;
         private static bool has_uv1 = false;
         private static bool has_uv2 = false;
@@ -384,8 +380,8 @@ namespace LcLTools
         private static bool has_uv5 = false;
         private static bool has_uv6 = false;
         private static bool has_uv7 = false;
-        private static bool has_color0 = false;
-        private static bool useAutoMapping = false;
+        private static bool has_color0 = true;
+        private static bool useAutoMapping = true;
         private static bool useAllComponent = true;
         private ModelImporterNormals normalImportType = ModelImporterNormals.Import;
         private ModelImporterTangents tangentImportType = ModelImporterTangents.Import;
@@ -528,6 +524,28 @@ namespace LcLTools
             return SemanticType.Unknown;
         }
 
+        //快速从字符串中提取Vector3
+        public Vector3 ExtractVector3FromData(string data, Vector3 offset)
+        {
+            if (data == string.Empty)
+                return offset;
+
+            string[] splitData = data.Split(new char[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
+
+            List<float> list = new List<float>();
+            foreach (var item in splitData)
+            {
+                if (float.TryParse(item, out float value))
+                {
+                    list.Add(value);
+                }
+            }
+            if (list.Count < 3)
+            {
+                return offset;
+            }
+            return new Vector3(list[0], list[1], list[2]);
+        }
 
         private bool refresh_data = false;
         private bool csv_asset_changed = false;
@@ -614,7 +632,12 @@ namespace LcLTools
                 is_from_DX_CSV = EditorGUILayout.Toggle("Is From DirectX CSV", is_from_DX_CSV);
                 is_reverse_vertex_order = EditorGUILayout.Toggle("Is Reverse Normal", is_reverse_vertex_order);
                 is_recalculate_bound = EditorGUILayout.Toggle("Is Recalculate AABB", is_recalculate_bound);
+
+
+                var offset = EditorGUILayout.TextField("从String中提取Offset", string.Empty);
+                vertexOffset = ExtractVector3FromData(offset, vertexOffset);
                 vertexOffset = EditorGUILayout.Vector3Field("Vertex Offset", vertexOffset);
+
                 vertexRotation = EditorGUILayout.Vector3Field("Vertex Rotation", vertexRotation);
                 vertexScale = EditorGUILayout.Vector3Field("Vertex Scale", vertexScale);
                 // jave.lin : has_uv0,1,2,3,4,5,6,7
@@ -867,7 +890,7 @@ namespace LcLTools
         {
             if (RDC_Text_Asset != null)
             {
-                try
+                // try
                 {
                     MappingSemanticsTypeByNames(ref semanticTypeDict_key_name_helper);
                     var parent = GetParentTrans();
@@ -953,10 +976,10 @@ namespace LcLTools
                     // jave.lin : 打印打出成功的信息
                     Debug.Log($"Export FBX Successfully! outputPath : {outputFullName}");
                 }
-                catch (Exception er)
-                {
-                    Debug.LogError($"Export FBX Failed! er: {er}");
-                }
+                // catch (Exception er)
+                // {
+                //     Debug.LogError($"Export FBX Failed! er: {er}");
+                // }
             }
         }
 
@@ -1141,6 +1164,7 @@ namespace LcLTools
 
                 // jave.lin : texcoord0
                 case SemanticType.TEXCOORD0_X:
+                    has_uv0 = true;
                     info.TEXCOORD0_X = float.Parse(data);
                     break;
                 case SemanticType.TEXCOORD0_Y:
@@ -1156,6 +1180,7 @@ namespace LcLTools
 
                 // jave.lin : texcoord1
                 case SemanticType.TEXCOORD1_X:
+                    has_uv1 = true;
                     info.TEXCOORD1_X = float.Parse(data);
                     break;
                 case SemanticType.TEXCOORD1_Y:
@@ -1171,6 +1196,7 @@ namespace LcLTools
 
                 // jave.lin : texcoord2
                 case SemanticType.TEXCOORD2_X:
+                    has_uv2 = true;
                     info.TEXCOORD2_X = float.Parse(data);
                     break;
                 case SemanticType.TEXCOORD2_Y:
@@ -1186,6 +1212,7 @@ namespace LcLTools
 
                 // jave.lin : texcoord3
                 case SemanticType.TEXCOORD3_X:
+                    has_uv3 = true;
                     info.TEXCOORD3_X = float.Parse(data);
                     break;
                 case SemanticType.TEXCOORD3_Y:
@@ -1201,6 +1228,7 @@ namespace LcLTools
 
                 // jave.lin : texcoord4
                 case SemanticType.TEXCOORD4_X:
+                    has_uv4 = true;
                     info.TEXCOORD4_X = float.Parse(data);
                     break;
                 case SemanticType.TEXCOORD4_Y:
@@ -1216,6 +1244,7 @@ namespace LcLTools
 
                 // jave.lin : texcoord5
                 case SemanticType.TEXCOORD5_X:
+                    has_uv5 = true;
                     info.TEXCOORD5_X = float.Parse(data);
                     break;
                 case SemanticType.TEXCOORD5_Y:
@@ -1231,6 +1260,7 @@ namespace LcLTools
 
                 // jave.lin : texcoord6
                 case SemanticType.TEXCOORD6_X:
+                    has_uv6 = true;
                     info.TEXCOORD6_X = float.Parse(data);
                     break;
                 case SemanticType.TEXCOORD6_Y:
@@ -1246,6 +1276,7 @@ namespace LcLTools
 
                 // jave.lin : texcoord7
                 case SemanticType.TEXCOORD7_X:
+                    has_uv7 = true;
                     info.TEXCOORD7_X = float.Parse(data);
                     break;
                 case SemanticType.TEXCOORD7_Y:
@@ -1261,6 +1292,7 @@ namespace LcLTools
 
                 // jave.lin : color0
                 case SemanticType.COLOR0_X:
+                    has_color0 = true;
                     info.COLOR0_X = float.Parse(data);
                     break;
                 case SemanticType.COLOR0_Y:
@@ -1281,10 +1313,23 @@ namespace LcLTools
                     break;
             }
         }
+        void InitVertexInfoWriteSwitch()
+        {
+            has_uv0 = false;
+            has_uv1 = false;
+            has_uv2 = false;
+            has_uv3 = false;
+            has_uv4 = false;
+            has_uv5 = false;
+            has_uv6 = false;
+            has_uv7 = false;
+            has_color0 = false;
+        }
 
         // jave.lin : 根据 csv 来填充 mesh 信息
         private void FillMeshFromCSV(Mesh mesh, string csv, bool is_from_DX_CSV)
         {
+            InitVertexInfoWriteSwitch();
             var line_splitor = new string[] { "\n" };
             var line_element_splitor = new string[] { "," };
 
@@ -1324,42 +1369,22 @@ namespace LcLTools
 
             // jave.lin : 先根据 IDX 来排序还原 vertex buffer 的内容
             // lines[1~count-1] : 比如： 0, 0,  0.0402, -1.57095E-17,  0.12606, -0.97949,  0.00, -0.20056,  0.00,  0.1098,  0.83691, -0.53613,  1.00, -0.06058,  0.81738
-
             Dictionary<int, VertexInfo> vertex_dict_key_idx = new Dictionary<int, VertexInfo>();
 
-            var indices = new List<int>();
-
-            var min_idx = int.MaxValue;
+            var idxList = new List<int>();
             for (int i = 1; i < lines.Length; i++)
             {
                 var line = lines[i];
                 var linesElements = line.Split(line_element_splitor, StringSplitOptions.RemoveEmptyEntries);
 
-                // jave.lin : 第几个顶点索引（0~count-1)
                 var idx = int.Parse(linesElements[1]);
-                if (min_idx > idx)
-                {
-                    min_idx = idx;
-                }
-            }
-
-            for (int i = 1; i < lines.Length; i++)
-            {
-                var line = lines[i];
-                var linesElements = line.Split(line_element_splitor, StringSplitOptions.RemoveEmptyEntries);
-
-                // jave.lin : 第几个顶点索引（0~count-1)
-                var idx = int.Parse(linesElements[1]) - min_idx;
-
-                // jave.lin : indices 缓存索引数据的添加
-                indices.Add(idx);
 
                 // jave.lin : 如果该 vertex 没有处理过，那么才去处理
                 if (!vertex_dict_key_idx.TryGetValue(idx, out VertexInfo info))
                 {
                     info = new VertexInfo();
                     vertex_dict_key_idx[idx] = info;
-
+                    idxList.Add(idx);
                     // jave.lin : loop to fill the a2v field
                     for (int j = 0; j < linesElements.Length; j++)
                     {
@@ -1368,6 +1393,7 @@ namespace LcLTools
                     }
                 }
             }
+            idxList.Sort();
 
             // jave.lin : 缩放、旋转、平移
             var rotation = Quaternion.Euler(vertexRotation);
@@ -1377,7 +1403,7 @@ namespace LcLTools
             // https://blog.csdn.net/linjf520/article/details/107501215
             var M_IT_mat = Matrix4x4.TRS(Vector3.zero, rotation, vertexScale).inverse.transpose;
 
-            // jave.lin : composite the data （最后就是我们要组合数据，统一赋值给 mesh）
+
             var vertices = new Vector3[vertex_dict_key_idx.Count];
             var normals = new Vector3[vertex_dict_key_idx.Count];
             var tangents = new Vector4[vertex_dict_key_idx.Count];
@@ -1391,22 +1417,36 @@ namespace LcLTools
             var uv8 = new Vector2[vertex_dict_key_idx.Count];
             var color0 = new Color[vertex_dict_key_idx.Count];
 
-            // jave.lin : 根据 0~count 的索引顺序来组织相关的 vertex 数据
-            for (int idx = 0; idx < vertices.Length; idx++)
+            Dictionary<int, int> vertexIdxIndex = new Dictionary<int, int>();
+            for (int i = 0; i < idxList.Count; i++)
             {
+                var idx = idxList[i];
+                vertexIdxIndex[idx] = i;
+
                 var info = vertex_dict_key_idx[idx];
-                vertices[idx] = TRS_mat * info.POSITION_H;
-                normals[idx] = M_IT_mat * info.NORMAL;
-                tangents[idx] = info.TANGENT;
-                uv[idx] = info.TEXCOORD0;
-                uv2[idx] = info.TEXCOORD1;
-                uv3[idx] = info.TEXCOORD2;
-                uv4[idx] = info.TEXCOORD3;
-                uv5[idx] = info.TEXCOORD4;
-                uv6[idx] = info.TEXCOORD5;
-                uv7[idx] = info.TEXCOORD6;
-                uv8[idx] = info.TEXCOORD7;
-                color0[idx] = info.COLOR0;
+                vertices[i] = TRS_mat * info.POSITION_H;
+                normals[i] = M_IT_mat * info.NORMAL;
+                tangents[i] = info.TANGENT;
+                uv[i] = info.TEXCOORD0;
+                uv2[i] = info.TEXCOORD1;
+                uv3[i] = info.TEXCOORD2;
+                uv4[i] = info.TEXCOORD3;
+                uv5[i] = info.TEXCOORD4;
+                uv6[i] = info.TEXCOORD5;
+                uv7[i] = info.TEXCOORD6;
+                uv8[i] = info.TEXCOORD7;
+                color0[i] = info.COLOR0;
+            }
+
+            var indices = new List<int>();
+            //todo:lcl
+            // 修复中间顶点序号不连续的问题
+            for (int i = 1; i < lines.Length; i++)
+            {
+                var line = lines[i];
+                var linesElements = line.Split(line_element_splitor, StringSplitOptions.RemoveEmptyEntries);
+                var idx = int.Parse(linesElements[1]);
+                indices.Add(vertexIdxIndex[idx]);
             }
 
             // jave.lin : 设置 mesh 信息
@@ -1440,7 +1480,7 @@ namespace LcLTools
                     // nop
                     break;
                 case ModelImporterNormals.Import:
-                    mesh.normals = normals;
+                    mesh.normals = normals.ToArray();
                     break;
                 case ModelImporterNormals.Calculate:
                     mesh.RecalculateNormals();
@@ -1456,7 +1496,7 @@ namespace LcLTools
                     // nop
                     break;
                 case ModelImporterTangents.Import:
-                    mesh.tangents = tangents;
+                    mesh.tangents = tangents.ToArray();
                     break;
                 case ModelImporterTangents.CalculateLegacy:
                 case ModelImporterTangents.CalculateLegacyWithSplitTangents:
@@ -1466,12 +1506,8 @@ namespace LcLTools
                 default:
                     break;
             }
-
-            //// jave.lin : 打印一下
-            //Debug.Log("FillMeshFromCSV done!");
         }
 
-#endif
 
     }
 }

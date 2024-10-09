@@ -4,16 +4,17 @@ using UnityEngine.UIElements;
 using System.Linq;
 using System;
 using System.IO;
+using UnityEditor.SceneManagement;
 using UnityEditor.UIElements;
 
 namespace LcLTools
 {
-
     enum ImageFormat
     {
         PNG,
         TGA,
     }
+
     enum MsaaScale
     {
         None = 1,
@@ -21,8 +22,12 @@ namespace LcLTools
         X4 = 4,
         X8 = 8,
     }
+
     public class ScreenshotEditor : EditorWindow
     {
+        public static readonly string captureTips = "Capture the current view";
+        static Button buttonGameView;
+
         static float marginSize = 5;
 
         static Vector2IntField textureSizeField;
@@ -31,12 +36,29 @@ namespace LcLTools
         static EnumField msaaScaleField;
         static TextField pathField;
 
-        private static Vector2Int textureSize = Vector2Int.one * 1024;
         private static ImageFormat textureFormat = ImageFormat.PNG;
         private static MsaaScale msaaScale = MsaaScale.X8;
-        private static string path = "Assets/Screenshot/screenshot.png";
+        private static string path = "Assets/Screenshot";
 
-        [MenuItem("LcLTools/截图工具", false, 1000)]
+        static Camera ScreenCaptureCamera
+        {
+            get
+            {
+                Camera camera = cameraField?.value as Camera;
+                if (camera == null)
+                {
+                    camera = Selection.activeGameObject?.GetComponent<Camera>();
+                    if (camera == null)
+                    {
+                        camera = GameObject.FindObjectOfType<Camera>();
+                    }
+                }
+
+                return camera;
+            }
+        }
+
+        [MenuItem("LcLTools/Screenshot/OpenWindow", false, 1000)]
         static void OpenWindow()
         {
             ScreenshotEditor window = GetWindow<ScreenshotEditor>();
@@ -46,25 +68,49 @@ namespace LcLTools
             window.Focus();
         }
 
+        [MenuItem("LcLTools/Screenshot/Show Button In GameView", false, 1000)]
+        static void ShowButtonInGameView()
+        {
+            var icon = EditorGUIUtility.TrIconContent("FrameCapture", captureTips);
+            buttonGameView = new Button(RenderCameraToFile)
+            {
+                text = "",
+                style =
+                {
+                    width = 20,
+                    height = 20,
+                    position = Position.Absolute,
+                    right = 2,
+                    top = 22,
+                    backgroundImage = icon.image as Texture2D,
+                    borderTopWidth = 0,
+                    borderBottomWidth = 0,
+                    borderLeftWidth = 0,
+                    borderRightWidth = 0,
+                    backgroundColor = new Color(0, 0, 0, 0),
+                }
+            };
+            GameViewUtils.AddVisualElementToGameView(buttonGameView);
+        }
+
+        [MenuItem("LcLTools/Screenshot/Hide Button In GameView", false, 1000)]
+        static void HideButtonInGameView()
+        {
+            GameViewUtils.RemoveVisualElementFromGameView(buttonGameView);
+        }
 
         public void CreateGUI()
         {
             VisualElement root = rootVisualElement;
 
 
-            if (cameraField == null) cameraField = new ObjectField("Render Camera") { objectType = typeof(Camera), value = Camera.main };
+            if (cameraField == null)
+                cameraField = new ObjectField("Render Camera") { objectType = typeof(Camera), value = Camera.main };
             cameraField.style.marginLeft = marginSize;
             cameraField.style.marginRight = marginSize;
             cameraField.style.marginBottom = marginSize;
             cameraField.style.marginTop = marginSize;
             root.Add(cameraField);
-
-            if (textureSizeField == null) textureSizeField = new Vector2IntField("图片大小") { value = textureSize };
-            textureSizeField.style.marginLeft = marginSize;
-            textureSizeField.style.marginRight = marginSize;
-            textureSizeField.style.marginBottom = marginSize;
-            textureSizeField.style.marginTop = marginSize;
-            root.Add(textureSizeField);
 
             if (textureFormatField == null) textureFormatField = new EnumField(textureFormat) { label = "图片格式" };
             textureFormatField.style.marginLeft = marginSize;
@@ -116,32 +162,25 @@ namespace LcLTools
 
         public void OpenFile()
         {
-            string file = EditorUtility.OpenFolderPanel("选择文件夹", Application.dataPath, "");
-            if (file != "")
-            {
-                pathField.value = $"{file}/screenshot.png";
-            }
-            Debug.Log(file);
-        }
-        void OnDestroy()
-        {
+            pathField.value = EditorUtility.OpenFolderPanel("选择文件夹", Application.dataPath, "");
         }
 
-        [MenuItem("LcLTools/渲染截图 %q")]
+
+        [MenuItem("LcLTools/Screenshot/截图快捷键 %q")]
         public static void RenderCameraToFile()
         {
-            Camera camera = cameraField?.value as Camera;
-            if (camera == null)
-            {
-                camera = Selection.activeGameObject.GetComponent<Camera>();
-            }
-            var size = textureSizeField?.value == null ? textureSize : textureSizeField.value;
+            Camera camera = ScreenCaptureCamera;
 
-            RenderTexture rt = new RenderTexture(size.x, size.y, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            var width = camera.pixelWidth;
+            var height = camera.pixelHeight;
+
+            RenderTexture rt = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32,
+                RenderTextureReadWrite.sRGB);
             // 抗锯齿
             int msaa = msaaScaleField?.value == null ? (int)msaaScale : (int)(MsaaScale)msaaScaleField.value;
             rt.antiAliasing = msaa;
-            RenderTexture rtTemp = new RenderTexture(size.x * msaa, size.y * msaa, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            RenderTexture rtTemp = new RenderTexture(width * msaa, height * msaa, 24, RenderTextureFormat.ARGB32,
+                RenderTextureReadWrite.sRGB);
             Graphics.Blit(rtTemp, rt);
 
 
@@ -156,21 +195,29 @@ namespace LcLTools
             tex.Apply();
             RenderTexture.active = null;
 
-            ImageFormat format = textureFormatField?.value == null ? textureFormat : (ImageFormat)textureFormatField.value;
+            ImageFormat format = textureFormatField?.value == null
+                ? textureFormat
+                : (ImageFormat)textureFormatField.value;
             string filePath = pathField?.value == null ? path : pathField.value;
+
+            var time = DateTime.Now.ToString("yyyyMMddHHmmss");
+            var sceneName = EditorSceneManager.GetActiveScene().name;
 
             byte[] bytes;
             switch (format)
             {
                 case ImageFormat.PNG:
-                    filePath = filePath.Replace(Path.GetExtension(filePath), ".png");
+                    // filePath = filePath.Replace(Path.GetExtension(filePath), ".png");
+                    filePath = Path.Combine(filePath, $"{sceneName}_{time}.png");
                     bytes = tex.EncodeToPNG();
                     break;
                 case ImageFormat.TGA:
-                    filePath = filePath.Replace(Path.GetExtension(filePath), ".tga");
+                    // filePath = filePath.Replace(Path.GetExtension(filePath), ".tga");
+                    filePath = Path.Combine(filePath, $"{sceneName}_{time}.tga");
                     bytes = tex.EncodeToTGA();
                     break;
                 default:
+                    filePath = Path.Combine(filePath, $"{sceneName}_{time}.jpg");
                     bytes = tex.EncodeToJPG();
                     break;
             }
@@ -184,6 +231,14 @@ namespace LcLTools
 
             File.WriteAllBytes(filePath, bytes);
             AssetDatabase.ImportAsset(filePath);
+
+            TextureImporter importer = AssetImporter.GetAtPath(filePath) as TextureImporter;
+            importer.alphaIsTransparency = true;
+            importer.mipmapEnabled = false;
+            importer.npotScale = TextureImporterNPOTScale.None;
+            AssetDatabase.ImportAsset(filePath);
+
+
             AssetDatabase.Refresh();
             Debug.Log("Saved to " + filePath);
             // 防止内存泄漏

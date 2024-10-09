@@ -28,18 +28,31 @@ namespace LcLShaderEditor
 
 
 
-// -------------------------------Foldout GUI-----------------------------------------
-        static GUIStyle m_GuiStyleFoldout = new GUIStyle("minibutton")
+        // -------------------------------Foldout GUI-----------------------------------------
+
+        static GUIStyle m_GuiStyleFoldout;
+        static GUIStyle GuiStyleFoldout
         {
-            contentOffset = new Vector2(22, 0),
-            fixedHeight = 20,
-            alignment = TextAnchor.MiddleLeft,
-            font = EditorStyles.boldLabel.font,
-            fontSize = EditorStyles.boldLabel.fontSize
+            get
+            {
+                if (m_GuiStyleFoldout == null)
+                {
+                    m_GuiStyleFoldout = new GUIStyle("minibutton")
+                    {
+                        contentOffset = new Vector2(22, 0),
+                        fixedHeight = 20,
+                        alignment = TextAnchor.MiddleLeft,
+                        font = EditorStyles.boldLabel.font,
+                        fontSize = EditorStyles.boldLabel.fontSize
 #if UNITY_2019_4_OR_NEWER
                             + 1,
 #endif
-        };
+                    };
+
+                }
+                return m_GuiStyleFoldout;
+            }
+        }
         static GUIStyle m_ToggleStyle;
         static GUIStyle ToggleStyle
         {
@@ -83,7 +96,7 @@ namespace LcLShaderEditor
                 GUI.enabled = true;
                 var guiColor = GUI.backgroundColor;
                 GUI.backgroundColor = isFolding ? Color.white : new Color(0.85f, 0.85f, 0.85f);
-                if (GUI.Button(rect, title, m_GuiStyleFoldout))
+                if (GUI.Button(rect, title, GuiStyleFoldout))
                 {
                     isFolding = !isFolding;
                 }
@@ -102,7 +115,7 @@ namespace LcLShaderEditor
         }
 
 
-// ----------------------------------------------------------------------------------
+        // ----------------------------------------------------------------------------------
 
         // public static string foldoutFlag = "_FoldoutValue";
         public static string foldoutFlag = "_FoldoutState";

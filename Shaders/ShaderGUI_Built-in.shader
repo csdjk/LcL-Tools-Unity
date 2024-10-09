@@ -1,6 +1,6 @@
 ﻿
 // Unity 内置GUI
-Shader "lcl/ShaderGUI/ShaderGUI_Built-in"
+Shader "LcL/ShaderGUI/ShaderGUI_Built-in"
 {
     // 材质属性面常见类型
     Properties
@@ -37,7 +37,7 @@ Shader "lcl/ShaderGUI/ShaderGUI_Built-in"
         [MaterialToggle] _MaterialToggle ("Material Toggle", Float) = 0
         // shader变体开关
         [Toggle(_SWITCH_ON)]_SWITCH ("Switch", int) = 0
-        
+
         [Header(KeywordEnum)]
         // 每个选项都将被设置 _OVERLAY_NONE, _OVERLAY_ADD, _OVERLAY_MULTIPLY shader keywords.
         // 配合multi_compile使用 每个名称都将 采用“属性名”+ 下划线 +“枚举名”这种形式的大写着色器关键字。最多可提供 9 个名称。

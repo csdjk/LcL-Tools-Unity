@@ -1,5 +1,5 @@
 //打印纹理 Gamma Space or Linear Space
-Shader "lcl/Common/ConvertColorSpace"
+Shader "LcL/Common/ConvertColorSpace"
 {
     Properties
     {

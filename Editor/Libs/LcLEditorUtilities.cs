@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Microsoft.Win32;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -11,7 +10,6 @@ namespace LcLTools
 {
     public class LcLEditorUtilities
     {
-
         public static StyleSheet GetStyleSheet(string name)
         {
             return GetAssetByName<StyleSheet>(name);
@@ -25,8 +23,8 @@ namespace LcLTools
                 var path = AssetDatabase.GUIDToAssetPath(guid);
                 if (Path.GetFileNameWithoutExtension(path) == name)
                     return AssetDatabase.LoadAssetAtPath<T>(path);
-
             }
+
             return null;
         }
 
@@ -56,6 +54,7 @@ namespace LcLTools
 
             return retList;
         }
+
         /// <summary>
         /// 资产转GUID
         /// </summary>
@@ -77,6 +76,7 @@ namespace LcLTools
 
             return null;
         }
+
         /// <summary>
         /// 绝对路径转Unity工程相对路径
         /// </summary>
@@ -84,7 +84,6 @@ namespace LcLTools
         /// <returns></returns>
         public static string AssetsRelativePath(string absolutePath)
         {
-
             if (absolutePath.StartsWith(Application.dataPath))
             {
                 return "Assets" + absolutePath.Substring(Application.dataPath.Length);
@@ -96,10 +95,12 @@ namespace LcLTools
                 {
                     return "Assets" + absolutePath.Substring(Application.dataPath.Length);
                 }
+
                 Debug.LogWarning("Full path does not contain the current project's Assets folder");
                 return absolutePath;
             }
         }
+
         /// <summary>
         /// 相对路径转绝对路径
         /// </summary>
@@ -109,8 +110,10 @@ namespace LcLTools
         {
             return Application.dataPath + path.Substring(6);
         }
+
         // 保存RenderTexture
-        public static void SaveRenderTextureToTexture(RenderTexture rt, string path, TextureFormat format = TextureFormat.RGB24)
+        public static void SaveRenderTextureToTexture(RenderTexture rt, string path,
+            TextureFormat format = TextureFormat.RGB24)
         {
             RenderTexture.active = rt;
             Texture2D tex = new Texture2D(rt.width, rt.height, format, false);
@@ -147,7 +150,7 @@ namespace LcLTools
             return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
         }
 
-        // path : 
+        // path :
         /// <summary>
         /// 加载纹理,绝对路径
         /// </summary>
@@ -200,22 +203,95 @@ namespace LcLTools
             {
                 return null;
             }
+
             List<string> paths = new List<string>();
             foreach (var item in Selection.objects)
             {
                 paths.Add(GetAssetAbsolutePath(item));
             }
+
             return paths;
         }
 
 
+        public static string GetAssetDirectory(UnityEngine.Object asset)
+        {
+            if (asset == null)
+            {
+                Debug.LogError("Asset is null");
+                return null;
+            }
+
+            string assetPath = AssetDatabase.GetAssetPath(asset);
+            if (string.IsNullOrEmpty(assetPath))
+            {
+                Debug.LogError("Asset path is invalid");
+                return null;
+            }
+
+            return Path.GetDirectoryName(assetPath);
+        }
+
+        /// <summary>
+        /// 在传入的资源同目录下创建资源目录，并返回新资源的路径。
+        /// </summary>
+        /// <param name="asset">资源对象。</param>
+        /// <param name="newAssetName">新资源的名称。</param>
+        /// <param name="createNewFolder">是否创建新文件夹。</param>
+        /// <param name="newFolderName">新文件夹的名称（可选，默认为"NewFolder"）。</param>
+        /// <returns>新资源的路径，如果资源对象为空或路径无效，则返回null。</returns>
+        public static string CreatePathInAssetDirectory(UnityEngine.Object asset, string newAssetName,
+            bool createNewFolder = false, string newFolderName = "NewFolder")
+        {
+            if (asset == null)
+            {
+                Debug.LogError("Asset is null");
+                return null;
+            }
+            string assetPath = AssetDatabase.GetAssetPath(asset);
+            return CreatePathInAssetDirectory(assetPath, newAssetName, createNewFolder, newFolderName);
+        }
+
+        public static string CreatePathInAssetDirectory(string path, string newAssetName,
+            bool createNewFolder = false, string newFolderName = "NewFolder")
+        {
+            if (string.IsNullOrEmpty(path))
+            {
+                Debug.LogError("path is invalid");
+                return null;
+            }
+
+            string directoryPath = Path.GetDirectoryName(path);
+            if (createNewFolder)
+            {
+                string newFolderPath = Path.Combine(directoryPath, newFolderName);
+                if (!AssetDatabase.IsValidFolder(newFolderPath))
+                {
+                    AssetDatabase.CreateFolder(directoryPath, newFolderName);
+                }
+
+                return Path.Combine(newFolderPath, newAssetName);
+            }
+
+            return Path.Combine(directoryPath, newAssetName);
+        }
+
+
+        /// <summary>
+        /// 通过开始菜单查找应用程序的路径
+        /// </summary>
+        /// <param name="appName">要查找的应用程序名称</param>
+        /// <param name="appPath">应用程序路径</param>
+        /// <returns></returns>
         public static bool GetApplicationByStartMenu(string appName, out string appPath)
         {
             appPath = null;
             /// %AppData%\Microsoft\Windows\Start Menu\Programs
-            string startMenuPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs");
+            string startMenuPath =
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs");
             /// %ProgramData%\Microsoft\Windows\Start Menu\Programs
-            string allStartMenuPath = Path.Combine(Environment.GetEnvironmentVariable("ALLUSERSPROFILE"), "Microsoft\\Windows\\Start Menu\\Programs");
+            string allStartMenuPath = Path.Combine(Environment.GetEnvironmentVariable("ALLUSERSPROFILE"),
+                "Microsoft\\Windows\\Start Menu\\Programs");
 
             var appList = FileSystem.GetAllFilePath(startMenuPath, "*.lnk");
             appList.AddRange(FileSystem.GetAllFilePath(allStartMenuPath, "*.lnk"));
@@ -229,97 +305,7 @@ namespace LcLTools
                     return true;
                 }
             }
-            return false;
-        }
 
-        /// <summary>
-        /// 获取应用程序路径
-        /// </summary>
-        /// <param name="appName"></param>
-        /// <returns></returns>
-        // public static string GetApplicationPath(string appName)
-        // {
-        //     List<RegistryKey> RegistryKeys = new List<RegistryKey>();
-        //     RegistryKeys.Add(Registry.ClassesRoot);
-        //     RegistryKeys.Add(Registry.CurrentConfig);
-        //     RegistryKeys.Add(Registry.CurrentUser);
-        //     RegistryKeys.Add(Registry.LocalMachine);
-        //     RegistryKeys.Add(Registry.PerformanceData);
-        //     RegistryKeys.Add(Registry.Users);
-        //     string SubKeyName = @"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\" + appName;
-
-        //     foreach (RegistryKey registrykey in RegistryKeys)
-        //     {
-        //         using (RegistryKey subkey = registrykey.OpenSubKey(SubKeyName, false))
-        //         {
-        //             if (subkey == null)
-        //                 return "";
-
-        //             object path = subkey.GetValue("Path");
-
-        //             if (path != null)
-        //                 return (string)path;
-        //         }
-        //     }
-        //     return "";
-        // }
-
-        /// <summary>
-        /// 查找安装的软件
-        /// %ProgramData%\Microsoft\Windows\Start Menu\Programs
-        /// %AppData%\Microsoft\Windows\Start Menu\Programs
-        /// </summary>
-        /// <param name="appName"> 软件名称</param>
-        /// <param name="appPath "> 安装路径</param>
-        /// <returns> true or false </returns>
-        public static bool GetApplicationPath(string appName, out string appPath)
-        {
-            appPath = null;
-            List<RegistryKey> RegistryKeys = new List<RegistryKey>();
-            RegistryKeys.Add(Registry.ClassesRoot);
-            RegistryKeys.Add(Registry.CurrentConfig);
-            RegistryKeys.Add(Registry.CurrentUser);
-            RegistryKeys.Add(Registry.LocalMachine);
-            RegistryKeys.Add(Registry.PerformanceData);
-            RegistryKeys.Add(Registry.Users);
-            Dictionary<string, string> softwares = new Dictionary<string, string>();
-            string SubKeyName = @"Software\Microsoft\Windows\CurrentVersion\Uninstall";
-            foreach (RegistryKey registrykey in RegistryKeys)
-            {
-                using (RegistryKey registryKey1 = registrykey.OpenSubKey(SubKeyName, false))
-                {
-                    if (registryKey1 == null) // 判断对象不存在
-                        continue;
-                    if (registryKey1.GetSubKeyNames() == null)
-                        continue;
-                    string[] KeyNames = registryKey1.GetSubKeyNames();
-                    foreach (string KeyName in KeyNames)// 遍历子项名称的字符串数组
-                    {
-                        using (RegistryKey RegistryKey2 = registryKey1.OpenSubKey(KeyName, false)) // 遍历子项节点
-                        {
-                            if (RegistryKey2 == null)
-                                continue;
-                            string name = RegistryKey2.GetValue("DisplayName", "").ToString(); // 获取软件名
-                            string InstallLocation = RegistryKey2.GetValue("InstallLocation", "").ToString(); // 获取安装路径
-                            if (!string.IsNullOrEmpty(InstallLocation) && !string.IsNullOrEmpty(name))
-                            {
-                                if (!softwares.ContainsKey(name))
-                                    softwares.Add(name, InstallLocation);
-                            }
-                        }
-                    }
-                }
-            }
-            if (softwares.Count <= 0)
-                return false;
-            foreach (string name in softwares.Keys)
-            {
-                if (name.Contains(appName))
-                {
-                    appPath = softwares[name];
-                    return true;
-                }
-            }
             return false;
         }
     }

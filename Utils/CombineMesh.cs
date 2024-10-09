@@ -1,5 +1,5 @@
-﻿
-//来自于：MOMO https://www.xuanyusong.com/archives/4620
+﻿//来自于：MOMO https://www.xuanyusong.com/archives/4620
+
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -48,6 +48,7 @@ namespace LcLTools
                             Debug.LogError("存在不同材质不予合并");
                             return;
                         }
+
                         if (lightmap == -1)
                             lightmap = meshRender.lightmapIndex;
                         if (lightmap != meshRender.lightmapIndex)
@@ -55,6 +56,7 @@ namespace LcLTools
                             Debug.LogError("存在不同烘焙贴图不予合并");
                             return;
                         }
+
                         combine[i].mesh = meshFilters[i].sharedMesh;
                         //记录参与合批的lightmapOffset
                         combine[i].lightmapScaleOffset = meshRender.lightmapScaleOffset;
@@ -67,6 +69,7 @@ namespace LcLTools
                         i++;
                     }
                 }
+
                 var go = new GameObject("combine", typeof(MeshFilter), typeof(MeshRenderer));
                 go.transform.position = centerPos;
                 go.AddComponent<CombineMesh>().lightmapIndex = lightmap;
@@ -80,7 +83,8 @@ namespace LcLTools
                 go.GetComponent<MeshRenderer>().sharedMaterial = material;
                 if (go)
                 {
-                    PrefabUtility.SaveAsPrefabAssetAndConnect(go, Application.dataPath + "/combine.prefab", InteractionMode.AutomatedAction);
+                    PrefabUtility.SaveAsPrefabAssetAndConnect(go, Application.dataPath + "/combine.prefab",
+                        InteractionMode.AutomatedAction);
                 }
             }
 
@@ -95,11 +99,12 @@ namespace LcLTools
                         min = Vector3.Min(min, comp.transform.position);
                         max = Vector3.Max(max, comp.transform.position);
                     }
+
                     return min + ((max - min) / 2);
                 }
+
                 return Vector3.zero;
             }
-
         }
 #endif
     }

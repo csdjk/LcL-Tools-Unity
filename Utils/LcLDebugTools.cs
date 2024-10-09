@@ -123,15 +123,15 @@ namespace LcLTools
         [SerializeField] private bool highConsumption = false;
         void OnEnable()
         {
-            if (highConsumption)
-            {
-                HeavyPostProcessingFeature.Enable(highIterations);
-            }
+            // if (highConsumption)
+            // {
+            //     HeavyPostProcessingFeature.Enable(highIterations);
+            // }
         }
 
         void OnDisable()
         {
-            HeavyPostProcessingFeature.Disable();
+            // HeavyPostProcessingFeature.Disable();
         }
 
         // public GameObject GetGameObject(string name)
