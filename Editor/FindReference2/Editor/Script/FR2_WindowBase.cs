@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEngine;
-
 namespace vietlabs.fr2
 {
     public interface IWindow
@@ -33,28 +30,25 @@ namespace vietlabs.fr2
         public void AddItemsToMenu(GenericMenu menu)
         {
             FR2_Cache api = FR2_Cache.Api;
-            if (api == null)
-            {
-                return;
-            }
+            if (api == null) return;
 
-            menu.AddDisabledItem(new GUIContent("FR2 - v2.5.2"));
+            menu.AddDisabledItem(FR2_GUIContent.FromString("FR2 - v2.5.8"));
             menu.AddSeparator(string.Empty);
 
-            menu.AddItem(new GUIContent("Enable"), !api.disabled, () => { api.disabled = !api.disabled; });
-            menu.AddItem(new GUIContent("Refresh"), false, () =>
+            menu.AddItem(FR2_GUIContent.FromString("Enable"), !FR2_SettingExt.disable, () => { FR2_SettingExt.disable = !FR2_SettingExt.disable; });
+            menu.AddItem(FR2_GUIContent.FromString("Refresh"), false, () =>
             {
                 //FR2_Asset.lastRefreshTS = Time.realtimeSinceStartup;
-				Resources.UnloadUnusedAssets();
-				EditorUtility.UnloadUnusedAssetsImmediate();
+                Resources.UnloadUnusedAssets();
+                EditorUtility.UnloadUnusedAssetsImmediate();
                 FR2_Cache.Api.Check4Changes(true);
                 FR2_SceneCache.Api.SetDirty();
             });
 
 #if FR2_DEV
-            menu.AddItem(new GUIContent("Refresh Usage"), false, () => FR2_Cache.Api.Check4Usage());
-            menu.AddItem(new GUIContent("Refresh Selected"), false, ()=> FR2_Cache.Api.RefreshSelection());
-            menu.AddItem(new GUIContent("Clear Cache"), false, () => FR2_Cache.Api.Clear());
+            menu.AddItem(FR2_GUIContent.FromString("Refresh Usage"), false, () => FR2_Cache.Api.Check4Usage());
+            menu.AddItem(FR2_GUIContent.FromString("Refresh Selected"), false, ()=> FR2_Cache.Api.RefreshSelection());
+            menu.AddItem(FR2_GUIContent.FromString("Clear Cache"), false, () => FR2_Cache.Api.Clear());
 #endif
         }
 
@@ -69,31 +63,27 @@ namespace vietlabs.fr2
                 OnSelectionChange();
             }
         }
-#endif
-
+#endif  
+        
         protected bool DrawEnable()
         {
             FR2_Cache api = FR2_Cache.Api;
-            if (api == null)
+            if (api == null) return false;
+            if (!FR2_SettingExt.disable) return true;
+
+            bool isPlayMode = EditorApplication.isPlayingOrWillChangePlaymode;
+            string message = isPlayMode
+                ? "Find References 2 is disabled in play mode!"
+                : "Find References 2 is disabled!";
+            
+            EditorGUILayout.HelpBox(FR2_GUIContent.From(message, FR2_Icon.Warning.image));
+            if (GUILayout.Button(FR2_GUIContent.FromString("Enable")))
             {
-                return false;
+                FR2_SettingExt.disable = !FR2_SettingExt.disable;
+                Repaint();
             }
-
-            bool v = api.disabled;
-            if (v)
-            {
-                EditorGUILayout.HelpBox("Find References 2 is disabled!", MessageType.Warning);
-
-                if (GUILayout.Button("Enable"))
-                {
-                    api.disabled = !api.disabled;
-                    Repaint();
-                }
-
-                return !api.disabled;
-            }
-
-            return !api.disabled;
+            
+            return false;
         }
 
     }

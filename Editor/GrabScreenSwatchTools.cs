@@ -1,14 +1,5 @@
-using System;
-using System.Linq;
-using System.Collections.Generic;
-using System.IO;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEditor;
-using UnityEditor.SceneManagement;
-using UnityToolbarExtender;
-using UnityEngine.UIElements;
-using System.Reflection;
 
 public class GrabScreenSwatchTools : EditorWindow
 {

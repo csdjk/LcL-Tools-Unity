@@ -1,22 +1,26 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
-
 namespace vietlabs.fr2
 {
-    public class FR2_UsedInBuild : IRefDraw
+    internal class FR2_UsedInBuild : IRefDraw
     {
+        private readonly FR2_RefDrawer drawer;
         private readonly FR2_TreeUI2.GroupDrawer groupDrawer;
 
         private bool dirty;
-        private readonly FR2_RefDrawer drawer;
         internal Dictionary<string, FR2_Ref> refs;
 
-        public FR2_UsedInBuild(IWindow window)
+        public FR2_UsedInBuild(IWindow window, Func<FR2_RefDrawer.Sort> getSortMode, Func<FR2_RefDrawer.Mode> getGroupMode)
         {
             this.window = window;
-            drawer = new FR2_RefDrawer(window);
+            drawer = new FR2_RefDrawer(window, getSortMode, getGroupMode)
+            {
+                messageNoRefs = "No scene enabled in Build Settings!"
+            };
+
             dirty = true;
             drawer.SetDirty();
         }
@@ -26,27 +30,18 @@ namespace vietlabs.fr2
 
         public int ElementCount()
         {
-            return refs == null ? 0 : refs.Count;
+            return refs?.Count ?? 0;
         }
 
         public bool Draw(Rect rect)
         {
-            if (dirty)
-            {
-                RefreshView();
-            }
-
+            if (dirty) RefreshView();
             return drawer.Draw(rect);
         }
 
         public bool DrawLayout()
         {
-            //Debug.Log("draw");
-            if (dirty)
-            {
-                RefreshView();
-            }
-
+            if (dirty) RefreshView();
             return drawer.DrawLayout();
         }
 
@@ -59,77 +54,54 @@ namespace vietlabs.fr2
         public void RefreshView()
         {
             var scenes = new HashSet<string>();
-            // string[] scenes = new string[sceneCount];
+
             foreach (EditorBuildSettingsScene scene in EditorBuildSettings.scenes)
             {
-                if (scene == null)
-                {
-                    continue;
-                }
-
-                if (scene.enabled == false)
-                {
-                    continue;
-                }
-
+                if (scene == null) continue;
+                if (scene.enabled == false) continue;
                 string sce = AssetDatabase.AssetPathToGUID(scene.path);
-
-                if (scenes.Contains(sce))
-                {
-                    continue;
-                }
-
+                if (scenes.Contains(sce)) continue;
                 scenes.Add(sce);
             }
 
-            refs = FR2_Ref.FindUsage(scenes.ToArray());
-
-            foreach (string VARIABLE in scenes)
+            refs = new Dictionary<string, FR2_Ref>();
+            var directRefs = FR2_Ref.FindUsage(scenes.ToArray());
+            foreach (string scene in scenes)
             {
-                FR2_Ref asset = null;
-                if (!refs.TryGetValue(VARIABLE, out asset))
-                {
-                    continue;
-                }
-
-
+                if (!directRefs.TryGetValue(scene, out FR2_Ref asset)) continue;
                 asset.depth = 1;
             }
 
             List<FR2_Asset> list = FR2_Cache.Api.AssetList;
             int count = list.Count;
 
+            // Collect assets in Resources / Streaming Assets
             for (var i = 0; i < count; i++)
             {
                 FR2_Asset item = list[i];
                 if (item.inEditor) continue;
-                if (item.inPlugins)
-                {
-                    if (item.type == FR2_AssetType.SCENE) continue;
-                }
+                if (item.IsExcluded) continue;
+                if (item.IsFolder) continue;
+                if (!item.assetPath.StartsWith("Assets/", StringComparison.Ordinal)) continue;
 
-                if (item.inResources || item.inStreamingAsset || item.inPlugins)
+                if (item.inResources || item.inStreamingAsset || item.inPlugins
+                    || !string.IsNullOrEmpty(item.AssetBundleName)
+                    || !string.IsNullOrEmpty(item.AtlasName))
                 {
-                    if (refs.ContainsKey(item.guid))
-                    {
-                        continue;
-                    }
-
+                    if (refs.ContainsKey(item.guid)) continue;
                     refs.Add(item.guid, new FR2_Ref(0, 1, item, null));
                 }
             }
 
-            // remove ignored items
-            var vals = refs.Values.ToArray();
-            foreach (var item in vals)
+            // Collect direct references
+            foreach (var kvp in directRefs)
             {
-                foreach (var ig in FR2_Setting.s.listIgnore)
-                {
-                    if (!item.asset.assetPath.StartsWith(ig)) continue;
-                    refs.Remove(item.asset.guid);
-                    //Debug.Log("Remove: " + item.asset.assetPath + "\n" + ig);
-                    break;
-                }
+                var item = kvp.Value.asset;
+                if (item.inEditor) continue;
+                if (item.IsExcluded) continue;
+                if (!item.assetPath.StartsWith("Assets/", StringComparison.Ordinal)) continue;
+                if (refs.ContainsKey(item.guid)) continue;
+                refs.Add(item.guid, new FR2_Ref(0, 1, item, null));
             }
 
             drawer.SetRefs(refs);

@@ -1,44 +1,41 @@
 ﻿using UnityEditor;
 using UnityEngine;
-using vietlabs.fr2;
 
-[CustomEditor(typeof(FR2_Cache))]
-internal class FR2_CacheEditor : Editor
+
+namespace vietlabs.fr2
 {
-    private static string inspectGUID;
-    private static int index;
-
-    public override void OnInspectorGUI()
+    [CustomEditor(typeof(FR2_Cache))]
+    internal class FR2_CacheEditor : Editor
     {
-        var c = (FR2_Cache)target;
+        private static string inspectGUID;
+        private static int index;
 
-        GUILayout.Label("Total : " + c.AssetList.Count);
-        FR2_Cache.DrawPriorityGUI();
-
-        Object s = Selection.activeObject;
-        if (s == null)
+        public override void OnInspectorGUI()
         {
-            return;
-        }
+            var c = (FR2_Cache)target;
 
-        string guid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(s));
+            GUILayout.Label("Total : " + c.AssetList.Count);
+            FR2_Cache.DrawPriorityGUI();
 
-        if (inspectGUID != guid)
-        {
-            inspectGUID = guid;
-            index = c.AssetList.FindIndex(item => item.guid == guid);
-        }
+            Object s = Selection.activeObject;
+            if (s == null) return;
 
-        if (index != -1)
-        {
-            if (index >= c.AssetList.Count)
+            string guid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(s));
+
+            if (inspectGUID != guid)
             {
-                index = 0;
+                inspectGUID = guid;
+                index = c.AssetList.FindIndex(item => item.guid == guid);
             }
 
-            serializedObject.Update();
-            SerializedProperty prop = serializedObject.FindProperty("AssetList").GetArrayElementAtIndex(index);
-            EditorGUILayout.PropertyField(prop, true);
+            if (index != -1)
+            {
+                if (index >= c.AssetList.Count) index = 0;
+
+                serializedObject.Update();
+                SerializedProperty prop = serializedObject.FindProperty("AssetList").GetArrayElementAtIndex(index);
+                EditorGUILayout.PropertyField(prop, true);
+            }
         }
     }
 }

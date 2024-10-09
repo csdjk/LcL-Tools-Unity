@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEditor;
 using UnityEditor.SceneManagement;
-using UnityToolbarExtender;
+using LcLTools.UnityToolbarExtender;
 using UnityEngine.UIElements;
 using System.Reflection;
 
@@ -207,12 +207,10 @@ namespace LcLTools
         static OpenSceneTools()
         {
             ToolbarExtender.LeftToolbarGUI.Add(OnToolbarGUI);
-
         }
 
         static void OnToolbarGUI()
         {
-            GUILayout.FlexibleSpace();
             var currentScene = EditorSceneManager.GetActiveScene().name;
             float width = 30 + currentScene.Length * 8;
             width = Mathf.Clamp(width, 100, 1000);

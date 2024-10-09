@@ -7,7 +7,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using CBParams = System.Collections.Generic.List<System.Collections.Generic.List<string>>;
-using Object = UnityEngine.Object;
+using UnityObject = UnityEngine.Object;
 
 namespace vietlabs.fr2
 {
@@ -24,16 +24,22 @@ namespace vietlabs.fr2
         private bool dirty;
         private int excludeCount;
         private string guidPressDelete;
+        
+        private readonly Func<FR2_RefDrawer.Sort> getSortMode;
+        private readonly Func<FR2_RefDrawer.Mode> getGroupMode;
+        
         internal List<FR2_Ref> list;
         internal Dictionary<string, FR2_Ref> refs;
         public int scanExcludeByIgnoreCount;
         public int scanExcludeByTypeCount;
-        private string searchTerm = "";
+        private readonly string searchTerm = "";
         private float TimePressDelete;
 
-        public FR2_DuplicateTree2(IWindow window)
+        public FR2_DuplicateTree2(IWindow window, Func<FR2_RefDrawer.Sort> getSortMode, Func<FR2_RefDrawer.Mode> getGroupMode)
         {
             this.window = window;
+            this.getSortMode = getSortMode;
+            this.getGroupMode = getGroupMode;
             groupDrawer = new FR2_TreeUI2.GroupDrawer(DrawGroup, DrawAsset);
         }
 
@@ -47,45 +53,36 @@ namespace vietlabs.fr2
 
         public bool DrawLayout()
         {
-            if (dirty)
-            {
-                RefreshView(cacheAssetList);
-            }
+            if (dirty) RefreshView(cacheAssetList);
 
-            if (fc.nChunks2 > 0 && fc.nScaned < fc.nChunks2)
+            if ((fc.nChunks2 > 0) && (fc.nScaned < fc.nChunks2))
             {
                 Rect rect = GUILayoutUtility.GetRect(1, Screen.width, 18f, 18f);
                 float p = fc.nScaned / (float)fc.nChunks2;
 
                 EditorGUI.ProgressBar(rect, p, string.Format("Scanning {0} / {1}", fc.nScaned, fc.nChunks2));
                 GUILayout.FlexibleSpace();
-                return true;
-            }
-
-            if (groupDrawer.hasValidTree)
+            } else
             {
-                groupDrawer.tree.itemPaddingRight = 60f;
+                if (groupDrawer.hasValidTree) groupDrawer.tree.itemPaddingRight = 60f;
+                groupDrawer.DrawLayout();    
             }
-            groupDrawer.DrawLayout();
+            
             DrawHeader();
             return false;
         }
 
         public int ElementCount()
         {
-            return list == null ? 0 : list.Count;
+            return list?.Count ?? 0;
         }
 
         private void DrawAsset(Rect r, string guid)
         {
-            FR2_Ref rf;
-            if (!refs.TryGetValue(guid, out rf))
-            {
-                return;
-            }
-
+            if (!refs.TryGetValue(guid, out FR2_Ref rf)) return;
+            
             rf.asset.Draw(r, false,
-                FR2_Setting.GroupMode != FR2_RefDrawer.Mode.Folder,
+                getGroupMode() != FR2_RefDrawer.Mode.Folder,
                 FR2_Setting.ShowFileSize,
                 FR2_Setting.s.displayAssetBundleName,
                 FR2_Setting.s.displayAtlasName,
@@ -93,10 +90,7 @@ namespace vietlabs.fr2
                 window);
 
             Texture tex = AssetDatabase.GetCachedIcon(rf.asset.assetPath);
-            if (tex == null)
-            {
-                return;
-            }
+            if (tex == null) return;
 
             Rect drawR = r;
             drawR.x = drawR.x + drawR.width; // (groupDrawer.TreeNoScroll() ? 60f : 70f) ;
@@ -107,9 +101,7 @@ namespace vietlabs.fr2
             if (GUI.Button(drawR, "Use", EditorStyles.miniButton))
             {
                 if (FR2_Export.IsMergeProcessing)
-                {
                     Debug.LogWarning("Previous merge is processing");
-                }
                 else
                 {
                     //AssetDatabase.SaveAssets();
@@ -118,15 +110,12 @@ namespace vietlabs.fr2
                     // Debug.Log("guid: " + rf.asset.guid + "  systemCopyBuffer " + EditorGUIUtility.systemCopyBuffer);
                     int index = rf.index;
                     Selection.objects = list.Where(x => x.index == index)
-                        .Select(x => FR2_Unity.LoadAssetAtPath<Object>(x.asset.assetPath)).ToArray();
+                        .Select(x => FR2_Unity.LoadAssetAtPath<UnityObject>(x.asset.assetPath)).ToArray();
                     FR2_Export.MergeDuplicate(rf.asset.guid);
                 }
             }
 
-            if (rf.asset.UsageCount() > 0)
-            {
-                return;
-            }
+            if (rf.asset.UsageCount() > 0) return;
 
             drawR.x -= 25;
             drawR.width = 20;
@@ -142,8 +131,7 @@ namespace vietlabs.fr2
 
                 GUI.color = col;
                 window.WillRepaint = true;
-            }
-            else
+            } else
             {
                 if (GUI.Button(drawR, "X", EditorStyles.miniButton))
                 {
@@ -156,15 +144,9 @@ namespace vietlabs.fr2
 
         private bool wasPreDelete(string guid)
         {
-            if (guidPressDelete == null || guid != guidPressDelete)
-            {
-                return false;
-            }
+            if (guidPressDelete == null || guid != guidPressDelete) return false;
 
-            if (Time.realtimeSinceStartup - TimePressDelete < TimeDelayDelete)
-            {
-                return true;
-            }
+            if (Time.realtimeSinceStartup - TimePressDelete < TimeDelayDelete) return true;
 
             guidPressDelete = null;
             return false;
@@ -208,7 +190,8 @@ namespace vietlabs.fr2
             fc.Reset(assetList, OnUpdateView, RefreshView);
         }
 
-        private void OnUpdateView(CBParams assetList) { }
+        private void OnUpdateView(CBParams assetList)
+        { }
 
         public bool isExclueAnyItem()
         {
@@ -228,17 +211,11 @@ namespace vietlabs.fr2
             list = new List<FR2_Ref>();
             refs = new Dictionary<string, FR2_Ref>();
             dicIndex = new Dictionary<string, List<FR2_Ref>>();
-            if (assetList == null)
-            {
-                return;
-            }
+            if (assetList == null) return;
 
             int minScore = searchTerm.Length;
             string term1 = searchTerm;
-            if (!caseSensitive)
-            {
-                term1 = term1.ToLower();
-            }
+            if (!caseSensitive) term1 = term1.ToLower();
 
             string term2 = term1.Replace(" ", string.Empty);
             excludeCount = 0;
@@ -248,7 +225,7 @@ namespace vietlabs.fr2
                 var lst = new List<FR2_Ref>();
                 for (var j = 0; j < assetList[i].Count; j++)
                 {
-                    var path = assetList[i][j];
+                    string path = assetList[i][j];
                     if (!path.StartsWith("Assets/"))
                     {
                         Debug.LogWarning("Ignore asset: " + path);
@@ -256,15 +233,9 @@ namespace vietlabs.fr2
                     }
 
                     string guid = AssetDatabase.AssetPathToGUID(path);
-                    if (string.IsNullOrEmpty(guid))
-                    {
-                        continue;
-                    }
+                    if (string.IsNullOrEmpty(guid)) continue;
 
-                    if (refs.ContainsKey(guid))
-                    {
-                        continue;
-                    }
+                    if (refs.ContainsKey(guid)) continue;
 
                     FR2_Asset asset = FR2_Cache.Api.Get(guid);
                     if (asset == null) continue;
@@ -289,10 +260,7 @@ namespace vietlabs.fr2
 
                     //calculate matching score
                     string name1 = fr2.asset.assetName;
-                    if (!caseSensitive)
-                    {
-                        name1 = name1.ToLower();
-                    }
+                    if (!caseSensitive) name1 = name1.ToLower();
 
                     string name2 = name1.Replace(" ", string.Empty);
 
@@ -319,10 +287,7 @@ namespace vietlabs.fr2
             groupDrawer.Reset(list,
                 rf => rf.asset.guid
                 , GetGroup, SortGroup);
-            if (window != null)
-            {
-                window.Repaint();
-            }
+            if (window != null) window.Repaint();
         }
 
         private string GetGroup(FR2_Ref rf)
@@ -345,24 +310,23 @@ namespace vietlabs.fr2
             dirty = true;
         }
 
-        public void RefreshSort() { }
+        public void RefreshSort()
+        { }
 
         private void DrawHeader()
         {
-            var text = groupDrawer.hasValidTree ? "Rescan" : "Scan";
+            string text = groupDrawer.hasValidTree ? "Rescan" : "Scan";
 
             if (GUILayout.Button(text))
-            {
-                // if (FR2_Cache)
-                {
-                    OnCacheReady();
-                    return;
-                }
 
-                // FR2_Cache.onReady -= OnCacheReady;
-                // FR2_Cache.onReady += OnCacheReady;
-                // FR2_Cache.Api.Check4Changes(false);
+                // if (FR2_Cache)
+            {
+                OnCacheReady();
             }
+
+            // FR2_Cache.onReady -= OnCacheReady;
+            // FR2_Cache.onReady += OnCacheReady;
+            // FR2_Cache.Api.Check4Changes(false);
         }
 
         private void OnCacheReady()
@@ -396,6 +360,7 @@ namespace vietlabs.fr2
         public int nScaned;
         public Action<CBParams> OnCompareComplete;
         public Action<CBParams> OnCompareUpdate;
+
         // private int streamCount;
 
         public void Reset(CBParams list, Action<CBParams> onUpdate, Action<CBParams> onComplete)
@@ -403,16 +368,15 @@ namespace vietlabs.fr2
             nChunks = 0;
             nScaned = 0;
             nChunks2 = 0;
+
             // streamCount = streamClosedCount = 0;
             HashChunksNotComplete = new HashSet<FR2_Chunk>();
 
             if (heads.Count > 0)
-            {
                 for (var i = 0; i < heads.Count; i++)
                 {
                     heads[i].CloseChunk();
                 }
-            }
 
             deads.Clear();
             heads.Clear();
@@ -426,11 +390,16 @@ namespace vietlabs.fr2
             }
 
             cacheList = list;
+            // Debug.Log($"Found: {list.Count}");
+            
             for (var i = 0; i < list.Count; i++)
             {
                 var file = new FileInfo(list[i][0]);
                 int nChunk = Mathf.CeilToInt(file.Length / (float)FR2_Head.chunkSize);
                 nChunks2 += nChunk;
+
+                // string str = string.Join("\n", list[i]);
+                // Debug.Log($"Check: {i}\n{str}");
             }
 
             // for(int i =0;i< list.Count;i++)
@@ -446,16 +415,12 @@ namespace vietlabs.fr2
 
         public FR2_FileCompare AddHead(List<string> files)
         {
-            if (files.Count < 2)
-            {
-                Debug.LogWarning("Something wrong ! head should not contains < 2 elements");
-            }
-
+            if (files.Count < 2) Debug.LogWarning("Something wrong ! head should not contains < 2 elements");
+            
             var chunkList = new List<FR2_Chunk>();
             for (var i = 0; i < files.Count; i++)
             {
                 // streamCount++;
-
                 // try 
                 // {
                 // 	Debug.Log("new stream ");
@@ -485,7 +450,8 @@ namespace vietlabs.fr2
                 nChunk = nChunk,
                 chunkList = chunkList
             });
-
+            
+            // Debug.LogWarning($"Add New Head: \n {string.Join("\n", heads[^1].GetFiles().ToArray())}");
             nChunks += nChunk;
 
             return this;
@@ -499,17 +465,8 @@ namespace vietlabs.fr2
         private void ReadChunkAsync()
         {
             bool alive = ReadChunk();
-			if (alive)
-			{
-				return;
-			}
-
-            if (cacheList.Count > 0)
-            {
-                AddHead(cacheList[cacheList.Count - 1]);
-                cacheList.RemoveAt(cacheList.Count - 1);
-            }
-
+            if (alive) return;
+            
             var update = false;
             for (int i = heads.Count - 1; i >= 0; i--)
             {
@@ -522,41 +479,38 @@ namespace vietlabs.fr2
                 {
                     update = true;
                     deads.Add(h);
+
+                    // string[] str = h.chunkList.Select(item => item.file).ToArray();
+                    // Debug.Log($"AddResult: {string.Join("\n", str)}");
                 }
             }
+            
+            if (update) Trigger(OnCompareUpdate);
 
-            if (update)
-            {
-                Trigger(OnCompareUpdate);
-            }
-
-            if (!alive && cacheList.Count <= 0) //&& cacheList.Count <= 0 complete all chunk and cache list empty
+            if (cacheList.Count == 0)
             {
                 foreach (FR2_Chunk item in HashChunksNotComplete)
                 {
-                    if (item.stream != null && item.stream.CanRead)
-                    {
-                        Debug.Log("Close Stream!");
-
-                        item.stream.Close();
-                        item.stream = null;
-                    }
+                    if ((item.stream == null) || !item.stream.CanRead) continue;
+                    item.stream.Close();
+                    item.stream = null;
                 }
 
                 HashChunksNotComplete.Clear();
-                // Debug.Log("complete ");
                 nScaned = nChunks;
                 EditorApplication.update -= ReadChunkAsync;
                 Trigger(OnCompareComplete);
+            } 
+            else
+            {
+                AddHead(cacheList[cacheList.Count-1]);
+                cacheList.RemoveAt(cacheList.Count - 1);
             }
         }
 
         private void Trigger(Action<CBParams> cb)
         {
-            if (cb == null)
-            {
-                return;
-            }
+            if (cb == null) return;
 
             CBParams list = deads.Select(item => item.GetFiles()).ToList();
 
@@ -575,29 +529,17 @@ namespace vietlabs.fr2
                 FR2_Head h = heads[i];
                 if (h.isDead)
                 {
-					//Debug.LogWarning("Should never be here : " + h.chunkList[0].file);
+                    //Debug.LogWarning("Should never be here : " + h.chunkList[0].file);
                     continue;
                 }
-
+                
                 nScaned++;
                 alive = true;
                 h.ReadChunk();
                 h.CompareChunk(heads);
                 break;
             }
-
-            //if (!alive) return false;
-
-            //alive = false;
-            //for (var i = 0; i < heads.Count; i++)
-            //{
-            //    var h = heads[i];
-            //    if (h.isDead) continue;
-
-            //    h.CompareChunk(heads);
-            //    alive |= !h.isDead;
-            //}
-
+            
             return alive;
         }
     }
@@ -614,10 +556,7 @@ namespace vietlabs.fr2
         public int nChunk;
         public int size; //last stream read size
 
-        public bool isDead
-        {
-            get { return currentChunk == nChunk || chunkList.Count == 1; }
-        }
+        public bool isDead => currentChunk == nChunk || chunkList.Count == 1;
 
         public List<string> GetFiles()
         {
@@ -668,10 +607,10 @@ namespace vietlabs.fr2
             int from = currentChunk * chunkSize;
             size = (int)Mathf.Min(fileSize - from, chunkSize);
 
-			for (var i = 0; i < chunkList.Count; i++)
-			{
-				FR2_Chunk chunk = chunkList[i];
-				if (chunk.streamError) continue;
+            for (var i = 0; i < chunkList.Count; i++)
+            {
+                FR2_Chunk chunk = chunkList[i];
+                if (chunk.streamError) continue;
                 chunk.size = size;
 
                 if (chunk.streamInited == false)
@@ -691,10 +630,11 @@ namespace vietlabs.fr2
 						
 						Debug.LogWarning("Exception: " + e + "\n" + chunk.file + "\n" + chunk.stream);
 					#else
-					catch {
+                    catch
+                    {
 					#endif
 
-						chunk.streamError = true;
+                        chunk.streamError = true;
                         if (chunk.stream != null) // just to make sure we close the stream
                         {
                             chunk.stream.Close();
@@ -704,7 +644,7 @@ namespace vietlabs.fr2
 
                     if (chunk.stream == null)
                     {
-						chunk.streamError = true;
+                        chunk.streamError = true;
                         continue;
                     }
                 }
@@ -712,26 +652,22 @@ namespace vietlabs.fr2
                 try
                 {
                     chunk.stream.Read(chunk.buffer, 0, size);
-                }
-                catch (Exception e)
+                } catch (Exception e)
                 {
                     Debug.LogWarning(e + "\n" + chunk.file);
 
-					chunk.streamError = true;
+                    chunk.streamError = true;
                     chunk.stream.Close();
-				}
-			}
+                }
+            }
 
-			// clean up dead chunks
-			for (var i = chunkList.Count-1; i>=0; i--)
-			{
-				if (chunkList[i].streamError) chunkList.RemoveAt(i);
-			}
+            // clean up dead chunks
+            for (int i = chunkList.Count - 1; i >= 0; i--)
+            {
+                if (chunkList[i].streamError) chunkList.RemoveAt(i);
+            }
 
-			if (chunkList.Count == 1)
-			{
-				Debug.LogWarning("No more chunk in list");
-			}
+            if (chunkList.Count == 1) Debug.LogWarning("No more chunk in list");
 
             currentChunk++;
         }
@@ -745,17 +681,16 @@ namespace vietlabs.fr2
             {
                 FR2_Chunk chunk = chunkList[idx];
                 int diff = FirstDifferentIndex(buffer, chunk.buffer, size);
-                if (diff == -1)
-                {
-                    continue;
-                }
+                if (diff == -1) continue;
+                
 #if FR2_DEBUG
-            Debug.Log(string.Format(
+            Debug.Log(string.Format(chunkList[idx].file + 
                 " --> Different found at : idx={0} diff={1} size={2} chunk={3}",
             idx, diff, size, currentChunk));
 #endif
 
                 byte v = buffer[diff];
+                
                 var d = new Dictionary<byte, List<FR2_Chunk>>(); //new heads
                 chunkList.RemoveAt(idx);
                 FR2_FileCompare.HashChunksNotComplete.Add(chunk);
@@ -766,10 +701,7 @@ namespace vietlabs.fr2
                 {
                     FR2_Chunk tChunk = chunkList[j];
                     byte tValue = tChunk.buffer[diff];
-                    if (tValue == v)
-                    {
-                        continue;
-                    }
+                    if (tValue == v) continue;
 
                     idx--;
                     FR2_FileCompare.HashChunksNotComplete.Add(tChunk);
@@ -785,9 +717,8 @@ namespace vietlabs.fr2
 #if FR2_DEBUG
                     Debug.Log(" --> Dead head found for : " + list[0].file);
 #endif
-						if (list[0].stream != null) list[0].stream.Close();
-                    }
-                    else if (list.Count > 1) // 1 : dead head
+                        if (list[0].stream != null) list[0].stream.Close();
+                    } else if (list.Count > 1) // 1 : dead head
                     {
 #if FR2_DEBUG
                     Debug.Log(" --> NEW HEAD : " + list[0].file);
@@ -808,10 +739,7 @@ namespace vietlabs.fr2
         {
             for (var i = 0; i < maxIndex; i++)
             {
-                if (arr1[i] != arr2[i])
-                {
-                    return i;
-                }
+                if (arr1[i] != arr2[i]) return i;
             }
 
             return -1;
@@ -823,9 +751,9 @@ namespace vietlabs.fr2
         public byte[] buffer;
         public string file;
         public long size;
-
-        public bool streamInited = false;
-		public bool streamError = false;
         public FileStream stream;
+        public bool streamError;
+
+        public bool streamInited;
     }
 }

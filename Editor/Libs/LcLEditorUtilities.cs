@@ -306,7 +306,11 @@ namespace LcLTools
                 }
             }
 
+<<<<<<< Updated upstream
             return false;
         }
+=======
+
+>>>>>>> Stashed changes
     }
 }

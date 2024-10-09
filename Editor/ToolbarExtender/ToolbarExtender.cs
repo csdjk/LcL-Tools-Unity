@@ -4,7 +4,7 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-namespace UnityToolbarExtender
+namespace LcLTools.UnityToolbarExtender
 {
     [InitializeOnLoad]
     public static class ToolbarExtender
@@ -125,6 +125,7 @@ namespace UnityToolbarExtender
             {
                 GUILayout.BeginArea(leftRect);
                 GUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
                 foreach (var handler in LeftToolbarGUI)
                 {
                     handler();
@@ -151,8 +152,10 @@ namespace UnityToolbarExtender
         public static void GUILeft()
         {
             GUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
             foreach (var handler in LeftToolbarGUI)
             {
+                GUILayout.Space(5);
                 handler();
             }
             GUILayout.EndHorizontal();
@@ -163,6 +166,7 @@ namespace UnityToolbarExtender
             GUILayout.BeginHorizontal();
             foreach (var handler in RightToolbarGUI)
             {
+                GUILayout.Space(5);
                 handler();
             }
             GUILayout.EndHorizontal();

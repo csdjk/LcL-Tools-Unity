@@ -7,26 +7,28 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
+
 using UnityEngine;
 using Object = UnityEngine.Object;
+
 #if UNITY_2017_1_OR_NEWER
 using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
 #endif
+
 #if SUPPORT_NESTED_PREFAB
 using UnityEditor.Experimental.SceneManagement;
-
 #endif
-
 
 namespace vietlabs.fr2
 {
-    public class FR2_SceneCache
+    internal class FR2_SceneCache
     {
         private static FR2_SceneCache _api;
         public static Action onReady;
         public static bool ready = true;
         private Dictionary<Component, HashSet<HashValue>> _cache = new Dictionary<Component, HashSet<HashValue>>();
+
         public int current;
         public Dictionary<string, HashSet<Component>> folderCache = new Dictionary<string, HashSet<Component>>();
 
@@ -79,30 +81,18 @@ namespace vietlabs.fr2
         {
             get
             {
-                if (_api == null)
-                {
-                    _api = new FR2_SceneCache();
-                }
+                if (_api == null) _api = new FR2_SceneCache();
 
                 return _api;
             }
         }
-
-        private bool _dirty = true;
-        public bool Dirty
-        {
-            get { return _dirty; }
-            set { _dirty = value; }
-        }
+        public bool Dirty { get; set; } = true;
 
         public Dictionary<Component, HashSet<HashValue>> cache
         {
             get
             {
-                if (_cache == null)
-                {
-                    refreshCache(window);
-                }
+                if (_cache == null) refreshCache(window);
 
                 return _cache;
             }
@@ -110,10 +100,7 @@ namespace vietlabs.fr2
 
         public void refreshCache(IWindow window)
         {
-            if (window == null)
-            {
-                return;
-            }
+            if (window == null) return;
 
             // if(!ready) return;
             this.window = window;
@@ -131,18 +118,13 @@ namespace vietlabs.fr2
             if (PrefabStageUtility.GetCurrentPrefabStage() != null)
             {
                 GameObject rootPrefab = PrefabStageUtility.GetCurrentPrefabStage().prefabContentsRoot;
-                if (rootPrefab != null)
-                {
-                    listRootGO = new List<GameObject> { rootPrefab };
-                }
+                if (rootPrefab != null) listRootGO = new List<GameObject> { rootPrefab };
             }
 
 #else
 #endif
             if (listRootGO == null)
-            {
                 listGO = FR2_Unity.getAllObjsInCurScene().ToList();
-            }
             else
             {
                 listGO = new List<GameObject>();
@@ -154,6 +136,7 @@ namespace vietlabs.fr2
 
             total = listGO.Count;
             current = 0;
+
             // Debug.Log("refresh cache total " + total);
             EditorApplication.update -= OnUpdate;
             EditorApplication.update += OnUpdate;
@@ -194,15 +177,9 @@ namespace vietlabs.fr2
                     ready = true;
                     Dirty = false;
                     listGO = null;
-                    if (onReady != null)
-                    {
-                        onReady();
-                    }
+                    if (onReady != null) onReady();
 
-                    if (window != null)
-                    {
-                        window.OnSelectionChange();
-                    }
+                    if (window != null) window.OnSelectionChange();
 
                     return;
                 }
@@ -210,10 +187,7 @@ namespace vietlabs.fr2
                 int index = listGO.Count - 1;
 
                 GameObject go = listGO[index];
-                if (go == null)
-                {
-                    continue;
-                }
+                if (go == null) continue;
 
                 string prefabGUID = FR2_Unity.GetPrefabParent(go);
                 if (!string.IsNullOrEmpty(prefabGUID))
@@ -222,10 +196,7 @@ namespace vietlabs.fr2
                     while (parent != null)
                     {
                         GameObject g = parent.gameObject;
-                        if (!prefabDependencies.ContainsKey(g))
-                        {
-                            prefabDependencies.Add(g, new HashSet<string>());
-                        }
+                        if (!prefabDependencies.ContainsKey(g)) prefabDependencies.Add(g, new HashSet<string>());
 
                         prefabDependencies[g].Add(prefabGUID);
                         parent = parent.parent;
@@ -236,24 +207,15 @@ namespace vietlabs.fr2
 
                 foreach (Component com in components)
                 {
-                    if (com == null)
-                    {
-                        continue;
-                    }
+                    if (com == null) continue;
 
                     var serialized = new SerializedObject(com);
                     SerializedProperty it = serialized.GetIterator().Copy();
                     while (it.NextVisible(true))
                     {
-                        if (it.propertyType != SerializedPropertyType.ObjectReference)
-                        {
-                            continue;
-                        }
+                        if (it.propertyType != SerializedPropertyType.ObjectReference) continue;
 
-                        if (it.objectReferenceValue == null)
-                        {
-                            continue;
-                        }
+                        if (it.objectReferenceValue == null) continue;
 
                         var isSceneObject = true;
                         string path = AssetDatabase.GetAssetPath(it.objectReferenceValue);
@@ -263,25 +225,16 @@ namespace vietlabs.fr2
                             if (!string.IsNullOrEmpty(dir))
                             {
                                 isSceneObject = false;
-                                if (!folderCache.ContainsKey(dir))
-                                {
-                                    folderCache.Add(dir, new HashSet<Component>());
-                                }
+                                if (!folderCache.ContainsKey(dir)) folderCache.Add(dir, new HashSet<Component>());
 
-                                if (!folderCache[dir].Contains(com))
-                                {
-                                    folderCache[dir].Add(com);
-                                }
+                                if (!folderCache[dir].Contains(com)) folderCache[dir].Add(com);
                             }
                         }
 
-                        if (!_cache.ContainsKey(com))
-                        {
-                            _cache.Add(com, new HashSet<HashValue>());
-                        }
+                        if (!_cache.ContainsKey(com)) _cache.Add(com, new HashSet<HashValue>());
 
                         _cache[com].Add(new HashValue
-                        { target = it.objectReferenceValue, isSceneObject = isSceneObject });
+                            { target = it.objectReferenceValue, isSceneObject = isSceneObject });
 
                         // if (!_cache.ContainsKey(com)) _cache.Add(com, new HashSet<SerializedProperty>());
                         // if (!_cache[com].Contains(it))
@@ -336,11 +289,12 @@ namespace vietlabs.fr2
         }
 
 
-        public class HashValue
+        internal class HashValue
         {
             public bool isSceneObject;
 
             public Object target;
+
             //public SerializedProperty pro;
 
             //			public HashValue(SerializedProperty pro, bool isSceneObject)

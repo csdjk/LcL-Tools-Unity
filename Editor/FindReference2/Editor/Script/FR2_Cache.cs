@@ -10,122 +10,32 @@ using UnityEngine;
 namespace vietlabs.fr2
 {
     [InitializeOnLoad]
-    public class FR2_CacheHelper : AssetPostprocessor
+    internal class FR2_CacheHelper : AssetPostprocessor
     {
         private static HashSet<string> scenes;
         private static HashSet<string> guidsIgnore;
+        internal static bool inited;
 
         static FR2_CacheHelper()
         {
+            #if UNITY_2020
+            // FIX CRASH on asset import
+            inited = false;
+            return;
+            #else
             EditorApplication.update -= InitHelper;
             EditorApplication.update += InitHelper;
+            #endif
         }
 
-        private static void InitHelper()
-        {
-            if (EditorApplication.isCompiling)
-            {
-                return;
-            }
-
-            // if (EditorApplication.isPlayingOrWillChangePlaymode) return;
-            if (!FR2_Cache.isReady)
-            {
-                return;
-            }
-
-            if (!FR2_Cache.Api.disabled)
-            {
-                InitListScene();
-                InitIgnore();
-
-#if UNITY_2018_1_OR_NEWER
-                EditorBuildSettings.sceneListChanged -= InitListScene;
-                EditorBuildSettings.sceneListChanged += InitListScene;
-#endif
-
-                EditorApplication.projectWindowItemOnGUI -= OnGUIProjectItem;
-                EditorApplication.projectWindowItemOnGUI += OnGUIProjectItem;
-
-                FR2_Cache.onReady -= OnCacheReady;
-                FR2_Cache.onReady += OnCacheReady;
-            }
-
-            EditorApplication.update -= InitHelper;
-        }
-
-        // private class AssetModificationHelper: UnityEditor.AssetModificationProcessor
-        // {
-        //     static void OnWillCreateAsset(string assetName)
-        //     {
-        //         FR2_Cache.Api.makeDirty();
-        //     }
-        //     static AssetDeleteResult OnWillDeleteAsset(string name,RemoveAssetOptions options)
-        //     {
-        //         FR2_Cache.Api.makeDirty();
-        //         return AssetDeleteResult.DidDelete;
-        //     }
-        //     private static AssetMoveResult OnWillMoveAsset(string sourcePath, string destinationPath)
-        //     {
-        //         FR2_Cache.Api.makeDirty();
-        //         AssetMoveResult assetMoveResult = AssetMoveResult.DidMove;
-
-        //         // Perform operations on the asset and set the value of 'assetMoveResult' accordingly.
-
-        //         return assetMoveResult;
-        //     }
-        //     static string[] OnWillSaveAssets(string[] paths)
-        //     {
-        //         FR2_Cache.Api.makeDirty();
-        //         return paths;
-        //     }
-        // }
-
-        private static void OnCacheReady()
-        {
-            InitIgnore();
-            // force repaint all project panels
-            EditorApplication.RepaintProjectWindow();
-        }
-
-        public static void InitIgnore()
-        {
-            guidsIgnore = new HashSet<string>();
-            foreach (string item in FR2_Setting.IgnoreAsset)
-            {
-                string guid = AssetDatabase.AssetPathToGUID(item);
-                if (guidsIgnore.Contains(guid))
-                {
-                    continue;
-                }
-
-                guidsIgnore.Add(guid);
-            }
-        }
-
-        private static void InitListScene()
-        {
-            scenes = new HashSet<string>();
-            // string[] scenes = new string[sceneCount];
-            foreach (EditorBuildSettingsScene scene in EditorBuildSettings.scenes)
-            {
-                string sce = AssetDatabase.AssetPathToGUID(scene.path);
-                // Debug.Log(scene.path + " " + sce);
-                if (scenes.Contains(sce))
-                {
-                    continue;
-                }
-
-                scenes.Add(sce);
-            }
-        }
-
-        private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets,
+        private static void OnPostprocessAllAssets(
+            string[] importedAssets, string[] deletedAssets,
             string[] movedAssets,
             string[] movedFromAssetPaths)
         {
 
             FR2_Cache.DelayCheck4Changes();
+
             //Debug.Log("OnPostProcessAllAssets : " + ":" + importedAssets.Length + ":" + deletedAssets.Length + ":" + movedAssets.Length + ":" + movedFromAssetPaths.Length);
 
             if (!FR2_Cache.isReady)
@@ -141,16 +51,10 @@ namespace vietlabs.fr2
 
             for (var i = 0; i < importedAssets.Length; i++)
             {
-                if (importedAssets[i] == FR2_Cache.CachePath)
-                {
-                    continue;
-                }
+                if (importedAssets[i] == FR2_Cache.CachePath) continue;
 
                 string guid = AssetDatabase.AssetPathToGUID(importedAssets[i]);
-                if (!FR2_Asset.IsValidGUID(guid))
-                {
-                    continue;
-                }
+                if (!FR2_Asset.IsValidGUID(guid)) continue;
 
                 if (FR2_Cache.Api.AssetMap.ContainsKey(guid))
                 {
@@ -183,10 +87,7 @@ namespace vietlabs.fr2
             {
                 string guid = AssetDatabase.AssetPathToGUID(movedAssets[i]);
                 FR2_Asset asset = FR2_Cache.Api.Get(guid);
-                if (asset != null)
-                {
-                    asset.MarkAsDirty(true, false);
-                }
+                if (asset != null) asset.MarkAsDirty();
             }
 
 #if FR2_DEBUG
@@ -195,51 +96,119 @@ namespace vietlabs.fr2
 
             FR2_Cache.Api.Check4Work();
         }
+        
+        internal static void InitHelper()
+        {
+            if (FR2_Unity.isEditorCompiling || FR2_Unity.isEditorPlayingOrWillChangePlaymode) return;
+            if (!FR2_Cache.isReady) return;
+            EditorApplication.update -= InitHelper;
+
+            inited = true;
+            InitListScene();
+            InitIgnore();
+
+#if UNITY_2018_1_OR_NEWER
+            EditorBuildSettings.sceneListChanged -= InitListScene;
+            EditorBuildSettings.sceneListChanged += InitListScene;
+#endif
+
+                #if UNITY_2022_1_OR_NEWER
+                EditorApplication.projectWindowItemInstanceOnGUI -= OnGUIProjectInstance;
+                EditorApplication.projectWindowItemInstanceOnGUI += OnGUIProjectInstance;
+                #else
+            EditorApplication.projectWindowItemOnGUI -= OnGUIProjectItem;
+            EditorApplication.projectWindowItemOnGUI += OnGUIProjectItem;
+                #endif
+
+            FR2_Cache.onReady -= OnCacheReady;
+            FR2_Cache.onReady += OnCacheReady;
+        }
+        
+        private static void OnCacheReady()
+        {
+            InitIgnore();
+
+            // force repaint all project panels
+            EditorApplication.RepaintProjectWindow();
+        }
+
+        public static void InitIgnore()
+        {
+            guidsIgnore = new HashSet<string>();
+            foreach (string item in FR2_Setting.IgnoreAsset)
+            {
+                string guid = AssetDatabase.AssetPathToGUID(item);
+                guidsIgnore.Add(guid);
+            }
+        }
+
+        private static void InitListScene()
+        {
+            scenes = new HashSet<string>();
+
+            // string[] scenes = new string[sceneCount];
+            foreach (EditorBuildSettingsScene scene in EditorBuildSettings.scenes)
+            {
+                string sce = AssetDatabase.AssetPathToGUID(scene.path);
+                scenes.Add(sce);
+            }
+        }
+
+        private static string lastGUID;
+        private static void OnGUIProjectInstance(int instanceID, Rect selectionRect)
+        {
+            if (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(instanceID, out string guid, out long localId)) return;
+
+            bool isMainAsset = guid != lastGUID;
+            lastGUID = guid;
+
+            if (isMainAsset)
+            {
+                DrawProjectItem(guid, selectionRect);
+                return;
+            }
+            
+            if (!FR2_Cache.Api.setting.showSubAssetFileId) return;
+            var rect2 = selectionRect;
+            var label = new GUIContent(localId.ToString());
+            rect2.xMin = rect2.xMax - EditorStyles.miniLabel.CalcSize(label).x;
+
+            var c = GUI.color;
+            GUI.color = new Color(.5f, .5f, .5f, 0.5f);
+            GUI.Label(rect2, label, EditorStyles.miniLabel);
+            GUI.color = c;
+        }
 
         private static void OnGUIProjectItem(string guid, Rect rect)
         {
+            bool isMainAsset = guid != lastGUID;
+            lastGUID = guid;
+            if (isMainAsset) DrawProjectItem(guid, rect);
+        }
+
+        private static void DrawProjectItem(string guid, Rect rect)
+        {
             var r = new Rect(rect.x, rect.y, 1f, 16f);
             if (scenes.Contains(guid))
-            {
                 EditorGUI.DrawRect(r, GUI2.Theme(new Color32(72, 150, 191, 255), Color.blue));
-            }
             else if (guidsIgnore.Contains(guid))
             {
                 var ignoreRect = new Rect(rect.x + 3f, rect.y + 6f, 2f, 2f);
                 EditorGUI.DrawRect(ignoreRect, GUI2.darkRed);
             }
 
-            if (!FR2_Cache.isReady)
-            {
-                return; // not ready
-            }
-
-            if (!FR2_Setting.ShowReferenceCount)
-            {
-                return;
-            }
+            if (!FR2_Cache.isReady) return; // not ready
+            if (!FR2_Setting.ShowReferenceCount) return;
 
             FR2_Cache api = FR2_Cache.Api;
-            if (FR2_Cache.Api.AssetMap == null)
-            {
-                FR2_Cache.Api.Check4Changes(false);
-            }
+            if (FR2_Cache.Api.AssetMap == null) FR2_Cache.Api.Check4Changes(false);
+            if (!api.AssetMap.TryGetValue(guid, out FR2_Asset item)) return;
 
-            FR2_Asset item;
-
-            if (!api.AssetMap.TryGetValue(guid, out item))
-            {
-                return;
-            }
-
-            if (item == null || item.UsedByMap == null)
-            {
-                return;
-            }
+            if (item == null || item.UsedByMap == null) return;
 
             if (item.UsedByMap.Count > 0)
             {
-                var content = new GUIContent(item.UsedByMap.Count.ToString());
+                var content = FR2_GUIContent.FromString(item.UsedByMap.Count.ToString());
                 r.width = 0f;
                 r.xMin -= 100f;
                 GUI.Label(r, content, GUI2.miniLabelAlignRight);
@@ -247,36 +216,117 @@ namespace vietlabs.fr2
         }
     }
 
+    [Serializable] internal class FR2_SettingExt
+    {
+        public static bool disable
+        {
+            get => inst.internalDisabled;
+
+            set => inst.internalDisabled = value;
+        }
+        
+        private const string path = "Library/FR2/fr2.cfg";
+        private static FR2_SettingExt inst;
+        
+        static FR2_SettingExt()
+        {
+            
+            inst = new FR2_SettingExt();
+            if (!File.Exists(path)) return;
+
+            try
+            {
+                string content = File.ReadAllText(path);
+                JsonUtility.FromJsonOverwrite(content, inst);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning(e);
+                //nothing
+            }
+        }
+
+        static void DelaySave()
+        {
+            EditorApplication.update -= DelaySave;
+            
+            try
+            {
+                Directory.CreateDirectory("Library/FR2/");
+                File.WriteAllText(path, JsonUtility.ToJson(inst));
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning(e);
+                //nothing
+            }
+        }
+        
+        [SerializeField] private bool _disableInPlayMode = true;
+        [SerializeField] private bool _disabled;
+        
+        private bool internalDisabled
+        {
+            get => _disabled || (_disableInPlayMode && EditorApplication.isPlayingOrWillChangePlaymode);
+            set
+            {
+                ref bool disableRef = ref _disabled;
+                if (EditorApplication.isPlayingOrWillChangePlaymode) disableRef = ref _disableInPlayMode;
+                
+                if (disableRef == value) return;
+                disableRef = value;
+                
+                if (value) // disable at runtime: only disable `disableInPlayMode`
+                {	
+                    // ready = false;
+                    // EditorApplication.update -= AsyncProcess;
+                }
+                else // enable at runtime: enable all
+                {
+                    _disabled = false;
+                    // Api.Check4Changes(false);
+                }
+                
+                EditorApplication.update -= DelaySave;
+                EditorApplication.update += DelaySave;
+            }
+        }
+    }
+    
+    
+    
+
     [Serializable]
-    public class FR2_Setting
+    internal class FR2_Setting
     {
         private static FR2_Setting d;
 
+        [NonSerialized] private static HashSet<string> _hashIgnore;
+
+        //		private static Dictionary<string, List<string>> _IgnoreFiltered;
+        public static Action OnIgnoreChange;
+
         public bool alternateColor = true;
         public int excludeTypes; //32-bit type Mask
-        public FR2_RefDrawer.Mode groupMode;
+
         public List<string> listIgnore = new List<string>();
         public bool pingRow = true;
         public bool referenceCount = true;
+        public bool showPackageAsset = false;
+        public bool showSubAssetFileId = false;
 
         public bool showFileSize;
         public bool displayFileSize = true;
-        public bool displayAtlasName = false;
-        public bool displayAssetBundleName = false;
+        public bool displayAtlasName;
+        public bool displayAssetBundleName;
 
         public bool showUsedByClassed = true;
-        public FR2_RefDrawer.Sort sortMode;
-
         public int treeIndent = 10;
 
-
         public Color32 rowColor = new Color32(0, 0, 0, 12);
-        public Color32 ScanColor = new Color32(0, 204, 102, 255);
-        public Color SelectedColor = new Color(0, 0f, 1f, 0.25f);
 
-        [NonSerialized] private static HashSet<string> _hashIgnore;
-        //		private static Dictionary<string, List<string>> _IgnoreFiltered;
-        public static Action OnIgnoreChange;
+        // public Color32 ScanColor = new Color32(0, 204, 102, 255);
+        public Color SelectedColor = new Color(0, 0f, 1f, 0.25f);
 
 
         //public bool scanScripts		= false;
@@ -295,30 +345,18 @@ namespace vietlabs.fr2
 		
 		*/
 
-        internal static FR2_Setting s
-        {
-            get { return FR2_Cache.Api ? FR2_Cache.Api.setting : d ?? (d = new FR2_Setting()); }
-        }
+        internal static FR2_Setting s => FR2_Cache.Api ? FR2_Cache.Api.setting : d ?? (d = new FR2_Setting());
 
-        public static bool ShowUsedByClassed
-        {
-            get { return s.showUsedByClassed; }
-        }
+        public static bool ShowUsedByClassed => s.showUsedByClassed;
 
-        public static bool ShowFileSize
-        {
-            get { return s.showFileSize; }
-        }
+        public static bool ShowFileSize => s.showFileSize;
 
         public static int TreeIndent
         {
-            get { return s.treeIndent; }
+            get => s.treeIndent;
             set
             {
-                if (s.treeIndent == value)
-                {
-                    return;
-                }
+                if (s.treeIndent == value) return;
 
                 s.treeIndent = value;
                 setDirty();
@@ -327,13 +365,10 @@ namespace vietlabs.fr2
 
         public static bool ShowReferenceCount
         {
-            get { return s.referenceCount; }
+            get => s.referenceCount;
             set
             {
-                if (s.referenceCount == value)
-                {
-                    return;
-                }
+                if (s.referenceCount == value) return;
 
                 s.referenceCount = value;
                 setDirty();
@@ -341,13 +376,10 @@ namespace vietlabs.fr2
         }
         public static bool AlternateRowColor
         {
-            get { return s.alternateColor; }
+            get => s.alternateColor;
             set
             {
-                if (s.alternateColor == value)
-                {
-                    return;
-                }
+                if (s.alternateColor == value) return;
 
                 s.alternateColor = value;
                 setDirty();
@@ -356,13 +388,10 @@ namespace vietlabs.fr2
 
         public static Color32 RowColor
         {
-            get { return s.rowColor; }
+            get => s.rowColor;
             set
             {
-                if (s.rowColor.Equals(value))
-                {
-                    return;
-                }
+                if (s.rowColor.Equals(value)) return;
 
                 s.rowColor = value;
                 setDirty();
@@ -371,13 +400,10 @@ namespace vietlabs.fr2
 
         public static bool PingRow
         {
-            get { return s.pingRow; }
+            get => s.pingRow;
             set
             {
-                if (s.pingRow == value)
-                {
-                    return;
-                }
+                if (s.pingRow == value) return;
 
                 s.pingRow = value;
                 setDirty();
@@ -391,17 +417,11 @@ namespace vietlabs.fr2
                 if (_hashIgnore == null)
                 {
                     _hashIgnore = new HashSet<string>();
-                    if (s == null || s.listIgnore == null)
-                    {
-                        return _hashIgnore;
-                    }
+                    if (s == null || s.listIgnore == null) return _hashIgnore;
 
                     for (var i = 0; i < s.listIgnore.Count; i++)
                     {
-                        if (_hashIgnore.Contains(s.listIgnore[i]))
-                        {
-                            continue;
-                        }
+                        if (_hashIgnore.Contains(s.listIgnore[i])) continue;
 
                         _hashIgnore.Add(s.listIgnore[i]);
                     }
@@ -433,47 +453,35 @@ namespace vietlabs.fr2
         //	}
         //}
 
-        public static FR2_RefDrawer.Mode GroupMode
-        {
-            get { return s.groupMode; }
-            set
-            {
-                if (s.groupMode.Equals(value))
-                {
-                    return;
-                }
+        // public static FR2_RefDrawer.Mode GroupMode
+        // {
+        //     get => s.groupMode;
+        //     set
+        //     {
+        //         if (s.groupMode.Equals(value)) return;
+        //
+        //         s.groupMode = value;
+        //         setDirty();
+        //     }
+        // }
+        //
+        // public static FR2_RefDrawer.Sort SortMode
+        // {
+        //     get => s.sortMode;
+        //     set
+        //     {
+        //         if (s.sortMode.Equals(value)) return;
+        //
+        //         s.sortMode = value;
+        //         setDirty();
+        //     }
+        // }
 
-                s.groupMode = value;
-                setDirty();
-            }
-        }
-
-        public static FR2_RefDrawer.Sort SortMode
-        {
-            get { return s.sortMode; }
-            set
-            {
-                if (s.sortMode.Equals(value))
-                {
-                    return;
-                }
-
-                s.sortMode = value;
-                setDirty();
-            }
-        }
-
-        public static bool HasTypeExcluded
-        {
-            get { return s.excludeTypes != 0; }
-        }
+        public static bool HasTypeExcluded => s.excludeTypes != 0;
 
         private static void setDirty()
         {
-            if (FR2_Cache.Api != null)
-            {
-                EditorUtility.SetDirty(FR2_Cache.Api);
-            }
+            if (FR2_Cache.Api != null) EditorUtility.SetDirty(FR2_Cache.Api);
         }
 
         //		private static void initIgnoreFiltered()
@@ -502,58 +510,47 @@ namespace vietlabs.fr2
 
         public static void AddIgnore(string path)
         {
-            if (string.IsNullOrEmpty(path) || IgnoreAsset.Contains(path) || path == "Assets")
-            {
-                return;
-            }
+            if (string.IsNullOrEmpty(path) || IgnoreAsset.Contains(path) || path == "Assets") return;
 
             s.listIgnore.Add(path);
             _hashIgnore.Add(path);
             AssetType.SetDirtyIgnore();
             FR2_CacheHelper.InitIgnore();
+
             //initIgnoreFiltered();
 
             FR2_Asset.ignoreTS = Time.realtimeSinceStartup;
-            if (OnIgnoreChange != null)
-            {
-                OnIgnoreChange();
-            }
+            if (OnIgnoreChange != null) OnIgnoreChange();
         }
 
 
         public static void RemoveIgnore(string path)
         {
-            if (!IgnoreAsset.Contains(path))
-            {
-                return;
-            }
+            if (!IgnoreAsset.Contains(path)) return;
 
             _hashIgnore.Remove(path);
             s.listIgnore.Remove(path);
             AssetType.SetDirtyIgnore();
             FR2_CacheHelper.InitIgnore();
+
             //initIgnoreFiltered();
 
             FR2_Asset.ignoreTS = Time.realtimeSinceStartup;
-            if (OnIgnoreChange != null)
-            {
-                OnIgnoreChange();
-            }
+            if (OnIgnoreChange != null) OnIgnoreChange();
         }
 
         public static bool IsTypeExcluded(int type)
         {
-            return (s.excludeTypes >> type & 1) != 0;
+            return ((s.excludeTypes >> type) & 1) != 0;
         }
 
         public static void ToggleTypeExclude(int type)
         {
-            bool v = (s.excludeTypes >> type & 1) != 0;
+            bool v = ((s.excludeTypes >> type) & 1) != 0;
             if (v)
             {
                 s.excludeTypes &= ~(1 << type);
-            }
-            else
+            } else
             {
                 s.excludeTypes |= 1 << type;
             }
@@ -584,10 +581,7 @@ namespace vietlabs.fr2
 
         public void DrawSettings()
         {
-            if (FR2_Unity.DrawToggle(ref pingRow, "Full Row click to Ping"))
-            {
-                setDirty();
-            }
+            // if (FR2_Unity.DrawToggle(ref pingRow, "Full Row click to Ping")) setDirty();
 
             GUILayout.BeginHorizontal();
             {
@@ -616,31 +610,31 @@ namespace vietlabs.fr2
                 setDirty();
                 FR2_Unity.RepaintProjectWindows();
             }
+            
+            if (FR2_Unity.DrawToggle(ref showSubAssetFileId, "Show SubAsset FileId"))
+            {
+                setDirty();
+                FR2_Unity.RepaintFR2Windows();
+            }
 
             if (FR2_Unity.DrawToggle(ref showUsedByClassed, "Show Asset Type in use"))
             {
                 setDirty();
                 FR2_Unity.RepaintFR2Windows();
             }
-
-            GUILayout.BeginHorizontal();
+            
+            if (FR2_Unity.DrawToggle(ref showPackageAsset, "Show Asset in Packages"))
             {
-                Color c = EditorGUILayout.ColorField("Duplicate Scan Color", ScanColor);
-                if (!c.Equals(ScanColor))
-                {
-                    ScanColor = c;
-                    setDirty();
-                    FR2_Unity.RepaintFR2Windows();
-                }
+                setDirty();
+                FR2_Unity.RepaintFR2Windows();
             }
-            GUILayout.EndHorizontal();
         }
     }
 
-    public class FR2_Cache : ScriptableObject
+    internal class FR2_Cache : ScriptableObject
     {
-        internal const string CACHE_VERSION = "2.1";
         internal const string DEFAULT_CACHE_PATH = "Assets/FR2_Cache.asset";
+        internal const string CACHE_VERSION = "2.4";
 
         internal static int cacheStamp;
         internal static Action onReady;
@@ -651,44 +645,94 @@ namespace vietlabs.fr2
         internal static string _cacheGUID;
         internal static string _cachePath;
         public static int priority = 5;
+        
+        //internal List<FR2_DuplicateInfo> ScanDuplication(){
+        //	if (AssetMap == null) Check4Changes(false);
+
+        //	var dict = new Dictionary<string, FR2_DuplicateInfo>();
+        //	foreach (var item in AssetMap){
+        //		if (item.Value.IsMissing || item.Value.IsFolder) continue;
+        //		var hash = item.Value.GetFileInfoHash();
+        //		FR2_DuplicateInfo info;
+
+        //		if (!dict.TryGetValue(hash, out info)){
+        //			info = new FR2_DuplicateInfo(hash, item.Value.fileSize);
+        //			dict.Add(hash, info);
+        //		}
+
+        //		info.assets.Add(item.Value);
+        //	}
+
+        //	var result = new List<FR2_DuplicateInfo>();
+        //	foreach (var item in dict){
+        //		if (item.Value.assets.Count > 1){
+        //			result.Add(item.Value);
+        //		}
+        //	}
+
+        //	result.Sort((item1, item2)=>{
+        //		return item2.fileSize.CompareTo(item1.fileSize);
+        //	});
+
+        //	return result;
+        //}
+
+        private static readonly HashSet<string> SPECIAL_USE_ASSETS = new HashSet<string>
+        {
+            "Assets/link.xml", // this file used to control build/link process do not remove
+            "Assets/csc.rsp",
+            "Assets/mcs.rsp",
+            "Assets/GoogleService-Info.plist",
+            "Assets/google-services.json"
+        };
+
+        private static readonly HashSet<string> SPECIAL_EXTENSIONS = new HashSet<string>
+        {
+            ".asmdef",
+            ".cginc",
+            ".cs",
+            ".dll",
+            ".md",
+            ".xml",
+            ".json",
+            ".pdf",
+            ".txt",
+            ".giparams",
+            ".wlt",
+            ".preset",
+            ".exr",
+            ".aar",
+            ".srcaar",
+            ".pom",
+            ".bin",
+            ".html",
+            ".data"
+        };
 
         [SerializeField] private bool _autoRefresh;
         [SerializeField] private string _curCacheVersion;
-
-        [SerializeField] private bool _disabled;
+        
         [SerializeField] public List<FR2_Asset> AssetList;
-
-
-        private int frameSkipped;
-        [NonSerialized] internal Dictionary<string, FR2_Asset> AssetMap;
-        [NonSerialized] internal List<FR2_Asset> queueLoadContent;
-
-
-        internal bool ready;
         [SerializeField] internal FR2_Setting setting = new FR2_Setting();
 
         // ----------------------------------- INSTANCE -------------------------------------
 
         [SerializeField] public int timeStamp;
+        [NonSerialized] internal Dictionary<string, FR2_Asset> AssetMap;
+
+
+        private int frameSkipped;
+        [NonSerialized] internal List<FR2_Asset> queueLoadContent;
+
+
+        internal bool ready;
         [NonSerialized] internal int workCount;
-
-
-        public static void DrawPriorityGUI()
-        {
-            float w = EditorGUIUtility.labelWidth;
-            EditorGUIUtility.labelWidth = 120f;
-            FR2_Cache.priority = EditorGUILayout.IntSlider("  Scan Priority", FR2_Cache.priority, 0, 5);
-            EditorGUIUtility.labelWidth = w;
-        }
 
         internal static string CacheGUID
         {
             get
             {
-                if (!string.IsNullOrEmpty(_cacheGUID))
-                {
-                    return _cacheGUID;
-                }
+                if (!string.IsNullOrEmpty(_cacheGUID)) return _cacheGUID;
 
                 if (_cache != null)
                 {
@@ -705,10 +749,7 @@ namespace vietlabs.fr2
         {
             get
             {
-                if (!string.IsNullOrEmpty(_cachePath))
-                {
-                    return _cachePath;
-                }
+                if (!string.IsNullOrEmpty(_cachePath)) return _cachePath;
 
                 if (_cache != null)
                 {
@@ -721,60 +762,23 @@ namespace vietlabs.fr2
         }
 
         public bool Dirty { get; private set; }
-
         internal static FR2_Cache Api
         {
             get
             {
-                if (_cache != null)
-                {
-                    return _cache;
-                }
-
-                if (!_triedToLoadCache)
-                {
-                    TryLoadCache();
-                }
-
+                if (_cache != null) return _cache;
+                if (!_triedToLoadCache) TryLoadCache();
                 return _cache;
             }
         }
-
-        internal bool disabled
-        {
-            get { return _disabled; }
-            set
-            {
-                if (_disabled == value)
-                {
-                    return;
-                }
-
-                _disabled = value;
-
-                if (_disabled)
-                {
-                    //Debug.LogWarning("FR2 is disabled - Stopping all works !");	
-                    ready = false;
-                    EditorApplication.update -= AsyncProcess;
-                }
-                else
-                {
-                    FR2_Cache.Api.Check4Changes(false);
-                }
-            }
-        }
-
+        
         internal static bool isReady
         {
             get
             {
-                if (!_triedToLoadCache)
-                {
-                    TryLoadCache();
-                }
-
-                return _cache != null && _cache.ready;
+                if (FR2_SettingExt.disable) return false;
+                if (!_triedToLoadCache) TryLoadCache();
+                return (_cache != null) && _cache.ready;
             }
         }
 
@@ -782,10 +786,7 @@ namespace vietlabs.fr2
         {
             get
             {
-                if (!_triedToLoadCache)
-                {
-                    TryLoadCache();
-                }
+                if (!_triedToLoadCache) TryLoadCache();
 
                 return _cache != null;
             }
@@ -800,13 +801,29 @@ namespace vietlabs.fr2
             }
         }
 
+        private void OnEnable()
+        {
+#if FR2_DEBUG
+		Debug.Log("OnEnabled : " + _cache);
+#endif
+            if (_cache == null) _cache = this;
+
+            Check4Changes(false);
+        }
+
+
+        public static void DrawPriorityGUI()
+        {
+            float w = EditorGUIUtility.labelWidth;
+            EditorGUIUtility.labelWidth = 120f;
+            priority = EditorGUILayout.IntSlider("  Scan Priority", priority, 0, 5);
+            EditorGUIUtility.labelWidth = w;
+        }
+
         public static bool CheckSameVersion()
         {
             // Debug.Log((_cache == null) + " " + _cache._curCacheVersion );
-            if (_cache == null)
-            {
-                return false;
-            }
+            if (_cache == null) return false;
 
             return _cache._curCacheVersion == CACHE_VERSION;
         }
@@ -825,45 +842,27 @@ namespace vietlabs.fr2
             _cache.Check4Changes(false);
             _cacheGUID = AssetDatabase.AssetPathToGUID(_cachePath);
 
-            if (savePrefs)
-            {
-                EditorPrefs.SetString("fr2_cache.guid", _cacheGUID);
-            }
+            if (savePrefs) EditorPrefs.SetString("fr2_cache.guid", _cacheGUID);
 
-            if (writeFile)
-            {
-                File.WriteAllText("Library/fr2_cache.guid", _cacheGUID);
-            }
+            if (writeFile) File.WriteAllText("Library/fr2_cache.guid", _cacheGUID);
         }
 
         private static bool RestoreCacheFromGUID(string guid, bool savePrefs, bool writeFile)
         {
-            if (string.IsNullOrEmpty(guid))
-            {
-                return false;
-            }
+            if (string.IsNullOrEmpty(guid)) return false;
 
             string path = AssetDatabase.GUIDToAssetPath(guid);
-            if (string.IsNullOrEmpty(path))
-            {
-                return false;
-            }
+            if (string.IsNullOrEmpty(path)) return false;
 
             return RestoreCacheFromPath(path, savePrefs, writeFile);
         }
 
         private static bool RestoreCacheFromPath(string path, bool savePrefs, bool writeFile)
         {
-            if (string.IsNullOrEmpty(path))
-            {
-                return false;
-            }
+            if (string.IsNullOrEmpty(path)) return false;
 
             _cache = FR2_Unity.LoadAssetAtPath<FR2_Cache>(path);
-            if (_cache != null)
-            {
-                FoundCache(savePrefs, writeFile);
-            }
+            if (_cache != null) FoundCache(savePrefs, writeFile);
 
             return _cache != null;
         }
@@ -872,17 +871,11 @@ namespace vietlabs.fr2
         {
             _triedToLoadCache = true;
 
-            if (RestoreCacheFromPath(DEFAULT_CACHE_PATH, false, false))
-            {
-                return;
-            }
+            if (RestoreCacheFromPath(DEFAULT_CACHE_PATH, false, false)) return;
 
             // Check EditorPrefs
             string pref = EditorPrefs.GetString("fr2_cache.guid", string.Empty);
-            if (RestoreCacheFromGUID(pref, false, false))
-            {
-                return;
-            }
+            if (RestoreCacheFromGUID(pref, false, false)) return;
 
             // Read GUID from File
             if (File.Exists("Library/fr2_cache.guid"))
@@ -907,19 +900,14 @@ namespace vietlabs.fr2
 
         internal static void DeleteCache()
         {
-            if (_cache == null)
-            {
-                return;
-            }
+            if (_cache == null) return;
 
             try
             {
-                if (!string.IsNullOrEmpty(_cachePath))
-                {
-                    AssetDatabase.DeleteAsset(_cachePath);
-                }
+                if (!string.IsNullOrEmpty(_cachePath)) AssetDatabase.DeleteAsset(_cachePath);
+            } catch
+            { // ignored
             }
-            catch { }
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -930,12 +918,9 @@ namespace vietlabs.fr2
             _cache = CreateInstance<FR2_Cache>();
             _cache._curCacheVersion = CACHE_VERSION;
             string path = Application.dataPath + DEFAULT_CACHE_PATH
-                              .Substring(0, DEFAULT_CACHE_PATH.LastIndexOf('/') + 1).Replace("Assets", string.Empty);
+                .Substring(0, DEFAULT_CACHE_PATH.LastIndexOf('/') + 1).Replace("Assets", string.Empty);
 
-            if (!Directory.Exists(path))
-            {
-                Directory.CreateDirectory(path);
-            }
+            if (!Directory.Exists(path)) Directory.CreateDirectory(path);
 
             AssetDatabase.CreateAsset(_cache, DEFAULT_CACHE_PATH);
             EditorUtility.SetDirty(_cache);
@@ -946,10 +931,7 @@ namespace vietlabs.fr2
 
         internal static List<string> FindUsage(string[] listGUIDs)
         {
-            if (!isReady)
-            {
-                return null;
-            }
+            if (!isReady) return null;
 
             List<FR2_Asset> refs = Api.FindAssets(listGUIDs, true);
 
@@ -960,10 +942,7 @@ namespace vietlabs.fr2
                 for (var j = 0; j < tmp.Count; j++)
                 {
                     FR2_Asset itm = tmp[j];
-                    if (refs.Contains(itm))
-                    {
-                        continue;
-                    }
+                    if (refs.Contains(itm)) continue;
 
                     refs.Add(itm);
                 }
@@ -972,21 +951,13 @@ namespace vietlabs.fr2
             return refs.Select(item => item.guid).ToList();
         }
 
-        private void OnEnable()
-        {
-#if FR2_DEBUG
-		Debug.Log("OnEnabled : " + _cache);
-#endif
-            if (_cache == null)
-            {
-                _cache = this;
-            }
-
-            Check4Changes(false);
-        }
-
         internal void ReadFromCache()
         {
+            if (FR2_SettingExt.disable)
+            {
+                Debug.LogWarning("Something wrong??? FR2 is disabled!");
+            }
+            
             if (AssetList == null) AssetList = new List<FR2_Asset>();
 
             FR2_Unity.Clear(ref queueLoadContent);
@@ -994,10 +965,10 @@ namespace vietlabs.fr2
 
             for (var i = 0; i < AssetList.Count; i++)
             {
-                var item = AssetList[i];
+                FR2_Asset item = AssetList[i];
                 item.state = FR2_AssetState.CACHE;
 
-                var path = AssetDatabase.GUIDToAssetPath(item.guid);
+                string path = AssetDatabase.GUIDToAssetPath(item.guid);
                 if (string.IsNullOrEmpty(path))
                 {
                     item.type = FR2_AssetType.UNKNOWN; // to make sure if GUIDs being reused for a different kind of asset
@@ -1020,17 +991,22 @@ namespace vietlabs.fr2
 
         internal void ReadFromProject(bool force)
         {
+            if (FR2_SettingExt.disable)
+            {
+                Debug.LogWarning("Something wrong??? FR2 is disabled!");
+            }
+            
             if (AssetMap == null || AssetMap.Count == 0) ReadFromCache();
 
-            var paths = AssetDatabase.GetAllAssetPaths();
+            string[] paths = AssetDatabase.GetAllAssetPaths();
             cacheStamp++;
             workCount = 0;
             if (queueLoadContent != null) queueLoadContent.Clear();
 
             // Check for new assets
-            foreach (var p in paths)
+            foreach (string p in paths)
             {
-                var isValid = FR2_Unity.StringStartsWith(p, "Assets/", "Packages/", "Library/", "ProjectSettings/");
+                bool isValid = FR2_Unity.StringStartsWith(p, "Assets/", "Packages/", "Library/", "ProjectSettings/");
 
                 if (!isValid)
                 {
@@ -1040,17 +1016,12 @@ namespace vietlabs.fr2
                     continue;
                 }
 
-                var guid = AssetDatabase.AssetPathToGUID(p);
-                if (!FR2_Asset.IsValidGUID(guid))
-                {
-                    continue;
-                }
+                string guid = AssetDatabase.AssetPathToGUID(p);
+                if (!FR2_Asset.IsValidGUID(guid)) continue;
 
                 FR2_Asset asset;
                 if (!AssetMap.TryGetValue(guid, out asset))
-                {
                     AddAsset(guid);
-                }
                 else
                 {
                     asset.refreshStamp = cacheStamp; // mark this asset so it won't be deleted
@@ -1064,38 +1035,41 @@ namespace vietlabs.fr2
             }
 
             // Check for deleted assets
-            for (var i = AssetList.Count - 1; i >= 0; i--)
+            for (int i = AssetList.Count - 1; i >= 0; i--)
             {
-                if (AssetList[i].refreshStamp != cacheStamp)
-                {
-                    RemoveAsset(AssetList[i]);
-                }
+                if (AssetList[i].refreshStamp != cacheStamp) RemoveAsset(AssetList[i]);
             }
         }
 
+        [NonSerialized] internal static int delayCounter;
         internal static void DelayCheck4Changes()
         {
             EditorApplication.update -= Check;
             EditorApplication.update += Check;
         }
 
-        static void Check()
+        private static void Check()
         {
-            if (EditorApplication.isCompiling || EditorApplication.isUpdating) return;
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating || FR2_SettingExt.disable)
+            {
+                delayCounter = 100;
+                return;
+            }
+            
             if (Api == null) return;
-
+            if (delayCounter-- > 0) return;
             EditorApplication.update -= Check;
             Api.Check4Changes(false);
         }
-
+        
         internal void Check4Changes(bool force)
         {
-            if (EditorApplication.isCompiling || EditorApplication.isUpdating)
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating || FR2_SettingExt.disable)
             {
                 DelayCheck4Changes();
                 return;
             }
-
+            
             ready = false;
             ReadFromProject(force);
 
@@ -1107,13 +1081,8 @@ namespace vietlabs.fr2
 
         internal void RefreshAsset(string guid, bool force)
         {
-            FR2_Asset asset;
 
-            if (!AssetMap.TryGetValue(guid, out asset))
-            {
-                return;
-            }
-
+            if (!AssetMap.TryGetValue(guid, out FR2_Asset asset)) return;
             RefreshAsset(asset, force);
         }
 
@@ -1181,13 +1150,11 @@ namespace vietlabs.fr2
 
             AssetList.Add(asset);
             AssetMap.Add(guid, asset);
+
             //Debug.LogWarning("Add - AssetList: " + AssetList.Count);
 
             // Do not load content for FR2_Cache asset
-            if (guid == CacheGUID)
-            {
-                return;
-            }
+            if (guid == CacheGUID) return;
 
             workCount++;
             queueLoadContent.Add(asset);
@@ -1195,10 +1162,7 @@ namespace vietlabs.fr2
 
         internal void RemoveAsset(string guid)
         {
-            if (!AssetMap.ContainsKey(guid))
-            {
-                return;
-            }
+            if (!AssetMap.ContainsKey(guid)) return;
 
             RemoveAsset(AssetMap[guid]);
         }
@@ -1217,13 +1181,13 @@ namespace vietlabs.fr2
 			Debug.Log("Check 4 Usage");
 #endif
 
-            foreach (var item in AssetList)
+            foreach (FR2_Asset item in AssetList)
             {
                 if (item.IsMissing) continue;
                 FR2_Unity.Clear(ref item.UsedByMap);
             }
 
-            foreach (var item in AssetList)
+            foreach (FR2_Asset item in AssetList)
             {
                 if (item.IsMissing) continue;
                 AsyncUsedBy(item);
@@ -1235,8 +1199,6 @@ namespace vietlabs.fr2
 
         internal void Check4Work()
         {
-            if (disabled) return;
-
             if (workCount == 0)
             {
                 Check4Usage();
@@ -1247,23 +1209,13 @@ namespace vietlabs.fr2
             EditorApplication.update -= AsyncProcess;
             EditorApplication.update += AsyncProcess;
         }
-
+        
         internal void AsyncProcess()
         {
-            if (this == null)
-            {
-                return;
-            }
-
-            if (EditorApplication.isCompiling || EditorApplication.isUpdating)
-            {
-                return;
-            }
-
-            if (frameSkipped++ < 10 - 2 * priority)
-            {
-                return;
-            }
+            if (this == null) return;
+            if (FR2_SettingExt.disable) return;
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating) return;
+            if (frameSkipped++ < 10 - 2 * priority) return;
 
             frameSkipped = 0;
             float t = Time.realtimeSinceStartup;
@@ -1272,10 +1224,7 @@ namespace vietlabs.fr2
 			Debug.Log(Mathf.Round(t) + " : " + progress*workCount + "/" + workCount + ":" + isReady + " ::: " + queueLoadContent.Count);
 #endif
 
-            if (!AsyncWork(queueLoadContent, AsyncLoadContent, t))
-            {
-                return;
-            }
+            if (!AsyncWork(queueLoadContent, AsyncLoadContent, t)) return;
 
             EditorApplication.update -= AsyncProcess;
             EditorUtility.SetDirty(this);
@@ -1288,22 +1237,18 @@ namespace vietlabs.fr2
             float FRAME_DURATION = 1 / 1000f * (priority * 5 + 1); //prevent zero
 
             int c = arr.Count;
-            var counter = 0;
 
             while (c-- > 0)
             {
                 T last = arr[c];
                 arr.RemoveAt(c);
                 action(c, last);
+
                 //workCount--;
 
                 float dt = Time.realtimeSinceStartup - t - FRAME_DURATION;
-                if (dt >= 0)
-                {
-                    return false;
-                }
+                if (dt >= 0) return false;
 
-                counter++;
             }
 
             return true;
@@ -1318,35 +1263,20 @@ namespace vietlabs.fr2
 
         internal void AsyncUsedBy(FR2_Asset asset)
         {
-            if (AssetMap == null)
-            {
-                Check4Changes(false);
-            }
+            if (AssetMap == null) Check4Changes(false);
 
-            if (asset.IsFolder)
-            {
-                return;
-            }
+            if (asset.IsFolder) return;
 
 #if FR2_DEBUG
 			Debug.Log("Async UsedBy: " + asset.assetPath);
 #endif
 
-            foreach (KeyValuePair<string, HashSet<int>> item in asset.UseGUIDs)
+            foreach (KeyValuePair<string, HashSet<long>> item in asset.UseGUIDs)
             {
-                FR2_Asset tAsset;
-                if (AssetMap.TryGetValue(item.Key, out tAsset))
-                {
-                    if (tAsset == null || tAsset.UsedByMap == null)
-                    {
-                        continue;
-                    }
+                if (!AssetMap.TryGetValue(item.Key, out FR2_Asset tAsset)) continue;
+                if (tAsset == null || tAsset.UsedByMap == null) continue;
 
-                    if (!tAsset.UsedByMap.ContainsKey(asset.guid))
-                    {
-                        tAsset.AddUsedBy(asset.guid, asset);
-                    }
-                }
+                if (!tAsset.UsedByMap.ContainsKey(asset.guid)) tAsset.AddUsedBy(asset.guid, asset);
             }
         }
 
@@ -1363,10 +1293,7 @@ namespace vietlabs.fr2
             var result = new List<FR2_Asset>();
             foreach (KeyValuePair<string, FR2_Asset> item in AssetMap)
             {
-                if (item.Value.type != type)
-                {
-                    continue;
-                }
+                if (item.Value.type != type) continue;
 
                 result.Add(item.Value);
             }
@@ -1375,10 +1302,7 @@ namespace vietlabs.fr2
         }
         internal FR2_Asset FindAsset(string guid, string fileId)
         {
-            if (AssetMap == null)
-            {
-                Check4Changes(false);
-            }
+            if (AssetMap == null) Check4Changes(false);
             if (!isReady)
             {
 #if FR2_DEBUG
@@ -1387,41 +1311,22 @@ namespace vietlabs.fr2
                 return null;
             }
 
-            if (string.IsNullOrEmpty(guid))
-            {
-                return null;
-            }
+            if (string.IsNullOrEmpty(guid)) return null;
 
             //for (var i = 0; i < guids.Length; i++)
             {
                 //string guid = guids[i];
-                FR2_Asset asset;
-                if (!AssetMap.TryGetValue(guid, out asset))
-                {
-                    return null;
-                }
+                if (!AssetMap.TryGetValue(guid, out FR2_Asset asset)) return null;
 
-                if (asset.IsMissing)
-                {
-                    return null;
-                }
+                if (asset.IsMissing) return null;
 
-                if (asset.IsFolder)
-                {
-                    return null;
-                }
-                else
-                {
-                    return asset;
-                }
+                if (asset.IsFolder) return null;
+                return asset;
             }
         }
         internal List<FR2_Asset> FindAssets(string[] guids, bool scanFolder)
         {
-            if (AssetMap == null)
-            {
-                Check4Changes(false);
-            }
+            if (AssetMap == null) Check4Changes(false);
 
             var result = new List<FR2_Asset>();
 
@@ -1435,42 +1340,24 @@ namespace vietlabs.fr2
 
             var folderList = new List<FR2_Asset>();
 
-            if (guids.Length == 0)
-            {
-                return result;
-            }
+            if (guids.Length == 0) return result;
 
             for (var i = 0; i < guids.Length; i++)
             {
                 string guid = guids[i];
                 FR2_Asset asset;
-                if (!AssetMap.TryGetValue(guid, out asset))
-                {
-                    continue;
-                }
+                if (!AssetMap.TryGetValue(guid, out asset)) continue;
 
-                if (asset.IsMissing)
-                {
-                    continue;
-                }
+                if (asset.IsMissing) continue;
 
                 if (asset.IsFolder)
                 {
-                    if (!folderList.Contains(asset))
-                    {
-                        folderList.Add(asset);
-                    }
-                }
-                else
-                {
+                    if (!folderList.Contains(asset)) folderList.Add(asset);
+                } else
                     result.Add(asset);
-                }
             }
 
-            if (!scanFolder || folderList.Count == 0)
-            {
-                return result;
-            }
+            if (!scanFolder || folderList.Count == 0) return result;
 
             int count = folderList.Count;
             for (var i = 0; i < count; i++)
@@ -1481,18 +1368,12 @@ namespace vietlabs.fr2
                 // {
                 //     FR2_Asset a;
                 //     if (!AssetMap.TryGetValue(item.UseGUIDs[j], out a)) continue;
-                foreach (KeyValuePair<string, HashSet<int>> useM in item.UseGUIDs)
+                foreach (KeyValuePair<string, HashSet<long>> useM in item.UseGUIDs)
                 {
                     FR2_Asset a;
-                    if (!AssetMap.TryGetValue(useM.Key, out a))
-                    {
-                        continue;
-                    }
+                    if (!AssetMap.TryGetValue(useM.Key, out a)) continue;
 
-                    if (a.IsMissing)
-                    {
-                        continue;
-                    }
+                    if (a.IsMissing) continue;
 
                     if (a.IsFolder)
                     {
@@ -1501,11 +1382,8 @@ namespace vietlabs.fr2
                             folderList.Add(a);
                             count++;
                         }
-                    }
-                    else
-                    {
+                    } else
                         result.Add(a);
-                    }
                 }
             }
 
@@ -1516,72 +1394,22 @@ namespace vietlabs.fr2
 
         internal List<List<string>> ScanSimilar(Action IgnoreWhenScan, Action IgnoreFolderWhenScan)
         {
-            if (AssetMap == null)
-            {
-                Check4Changes(true);
-            }
+            if (AssetMap == null) Check4Changes(true);
 
             var dict = new Dictionary<string, List<FR2_Asset>>();
             foreach (KeyValuePair<string, FR2_Asset> item in AssetMap)
             {
-                if (item.Value == null)
-                {
-                    continue;
-                }
-
-                if (item.Value.IsMissing || item.Value.IsFolder)
-                {
-                    continue;
-                }
-
-                if (item.Value.inPlugins)
-                {
-                    continue;
-                }
-
-                if (item.Value.inEditor)
-                {
-                    continue;
-                }
-
-                if (!item.Value.assetPath.StartsWith("Assets/"))
-                {
-                    continue;
-                }
-
-                // if (item.Value.extension != ".png" && item.Value.extension != ".jpg") continue; 
+                if (item.Value == null) continue;
+                if (item.Value.IsMissing || item.Value.IsFolder) continue;
+                if (item.Value.inPlugins) continue;
+                if (item.Value.inEditor) continue;
+                if (item.Value.IsExcluded) continue;
+                if (!item.Value.assetPath.StartsWith("Assets/")) continue;
                 if (FR2_Setting.IsTypeExcluded(AssetType.GetIndex(item.Value.extension)))
                 {
-                    // Debug.LogWarning("ignore: " +item.Value.assetPath);
-                    if (IgnoreWhenScan != null)
-                    {
-                        IgnoreWhenScan();
-                    }
-
+                    if (IgnoreWhenScan != null) IgnoreWhenScan();
                     continue;
                 }
-
-                var isBreak = false;
-                foreach (string ignore in FR2_Setting.s.listIgnore)
-                {
-                    if (item.Value.assetPath.StartsWith(ignore))
-                    {
-                        isBreak = true;
-                        if (IgnoreFolderWhenScan != null)
-                        {
-                            IgnoreFolderWhenScan();
-                        }
-
-                        // Debug.Log("ignore " + item.Value.assetPath + " path ignore " + ignore);
-                        break;
-                    }
-                }
-
-                if (isBreak)
-                {
-                    continue;
-                }
-
 
                 string hash = item.Value.fileInfoHash;
                 if (string.IsNullOrEmpty(hash))
@@ -1592,8 +1420,7 @@ namespace vietlabs.fr2
                     continue;
                 }
 
-                List<FR2_Asset> list;
-                if (!dict.TryGetValue(hash, out list))
+                if (!dict.TryGetValue(hash, out List<FR2_Asset> list))
                 {
                     list = new List<FR2_Asset>();
                     dict.Add(hash, list);
@@ -1602,79 +1429,27 @@ namespace vietlabs.fr2
                 list.Add(item.Value);
             }
 
-            List<List<FR2_Asset>> result = dict.Values.Where(item => item.Count > 1).ToList();
-
-            result.Sort((item1, item2) => { return item2[0].fileSize.CompareTo(item1[0].fileSize); });
-
-            return result.Select(l => l.Select(i => i.assetPath).ToList()).ToList();
+            return dict.Values
+                .Where(item => item.Count > 1)
+                .OrderByDescending(item => item[0].fileSize)
+                .Select(item => item.Select(asset => asset.assetPath).ToList())
+                .ToList();
         }
-
-
-        //internal List<FR2_DuplicateInfo> ScanDuplication(){
-        //	if (AssetMap == null) Check4Changes(false);
-
-        //	var dict = new Dictionary<string, FR2_DuplicateInfo>();
-        //	foreach (var item in AssetMap){
-        //		if (item.Value.IsMissing || item.Value.IsFolder) continue;
-        //		var hash = item.Value.GetFileInfoHash();
-        //		FR2_DuplicateInfo info;
-
-        //		if (!dict.TryGetValue(hash, out info)){
-        //			info = new FR2_DuplicateInfo(hash, item.Value.fileSize);
-        //			dict.Add(hash, info);
-        //		}
-
-        //		info.assets.Add(item.Value);
-        //	}
-
-        //	var result = new List<FR2_DuplicateInfo>();
-        //	foreach (var item in dict){
-        //		if (item.Value.assets.Count > 1){
-        //			result.Add(item.Value);
-        //		}
-        //	}
-
-        //	result.Sort((item1, item2)=>{
-        //		return item2.fileSize.CompareTo(item1.fileSize);
-        //	});
-
-        //	return result;
-        //}
-
-        private static HashSet<string> SPECIAL_USE_ASSETS = new HashSet<string>()
-        {
-            "Assets/link.xml", // this file used to control build/link process do not remove
-			"Assets/csc.rsp",
-            "Assets/mcs.rsp",
-            "Assets/GoogleService-Info.plist",
-            "Assets/google-services.json",
-        };
-
-        private static HashSet<string> SPECIAL_EXTENSIONS = new HashSet<string>()
-        {
-            ".asmdef",
-            ".cginc",
-            ".cs",
-            ".dll",
-        };
-
 
         internal List<FR2_Asset> ScanUnused()
         {
-            if (AssetMap == null)
-            {
-                Check4Changes(false);
-            }
-
+            if (AssetMap == null) Check4Changes(false);
+            
+            // Get Addressable assets
+            var addressable = FR2_Addressable.isOk ? FR2_Addressable.GetAddresses()
+                .SelectMany(item => item.Value.assetGUIDs.Union(item.Value.childGUIDs))
+                .ToHashSet() : new HashSet<string>();
+            
             var result = new List<FR2_Asset>();
             foreach (KeyValuePair<string, FR2_Asset> item in AssetMap)
             {
                 FR2_Asset v = item.Value;
-                if (v.IsMissing || v.inEditor || v.IsScript || v.inResources || v.inPlugins || v.inStreamingAsset ||
-                v.IsFolder)
-                {
-                    continue;
-                }
+                if (v.IsMissing || v.inEditor || v.IsScript || v.inResources || v.inPlugins || v.inStreamingAsset || v.IsFolder) continue;
 
                 if (!v.assetPath.StartsWith("Assets/")) continue; // ignore built-in / packages assets
                 if (SPECIAL_USE_ASSETS.Contains(v.assetPath)) continue; // ignore assets with special use (can not remove)
@@ -1683,27 +1458,29 @@ namespace vietlabs.fr2
                 if (v.type == FR2_AssetType.DLL) continue;
                 if (v.type == FR2_AssetType.SCRIPT) continue;
                 if (v.type == FR2_AssetType.UNKNOWN) continue;
+                if (addressable.Contains(v.guid))continue;
+                
+                // Lightmap
+                // if (v.IsLightMap) continue;
 
-                if (v.IsExcluded) continue;
+                if (v.IsExcluded)
+                {
+                    // Debug.Log($"Excluded: {v.assetPath}");
+                    continue;
+                }
+
                 if (!string.IsNullOrEmpty(v.AtlasName)) continue;
                 if (!string.IsNullOrEmpty(v.AssetBundleName)) continue;
                 if (!string.IsNullOrEmpty(v.AddressableName)) continue;
 
                 if (v.UsedByMap.Count == 0) //&& !FR2_Asset.IGNORE_UNUSED_GUIDS.Contains(v.guid)
-                {
                     result.Add(v);
-                }
             }
 
-            result.Sort((item1, item2) =>
-            {
-                if (item1.extension == item2.extension)
-                {
-                    return item1.assetPath.CompareTo(item2.assetPath);
-                }
+            result.Sort((item1, item2) => item1.extension == item2.extension
+                ? string.Compare(item1.assetPath, item2.assetPath, StringComparison.Ordinal)
+                : string.Compare(item1.extension, item2.extension, StringComparison.Ordinal));
 
-                return item1.extension.CompareTo(item2.extension);
-            });
             return result;
         }
     }

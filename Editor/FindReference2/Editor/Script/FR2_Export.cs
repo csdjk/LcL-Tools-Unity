@@ -3,16 +3,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using UnityEditor;
 using UnityEngine;
-
-using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
-
 namespace vietlabs.fr2
 {
-    public class FR2_Export
+    internal class FR2_Export
     {
         // private static int processIndex;
         private const int maxThread = 5;
@@ -23,22 +19,19 @@ namespace vietlabs.fr2
         private static HashSet<string> cacheSelection;
 
 
-        private static List<Thread> lstThreads;
+        // private static List<Thread> lstThreads;
         public static bool IsMergeProcessing { get; private set; }
 
 
         public static void ExportCSV(FR2_Ref[] csvSource)
         {
-            var result = FR2_CSV.GetCSVRows(csvSource);
+            string result = FR2_CSV.GetCSVRows(csvSource);
             if (result.Length > 0)
             {
                 EditorGUIUtility.systemCopyBuffer = result;
                 Debug.Log("[FR2] CSV file content (" + csvSource.Length + " assets) copied to clipboard!");
-            }
-            else
-            {
+            } else
                 Debug.LogWarning("[FR2] Nothing to export!");
-            }
         }
 
         [MenuItem("Assets/FR2/Toggle Ignore", false, 19)]
@@ -54,19 +47,12 @@ namespace vietlabs.fr2
             for (var i = 0; i < actives.Length; i++)
             {
                 string path = AssetDatabase.GetAssetPath(actives[i]);
-                if (path.Equals(FR2_Cache.DEFAULT_CACHE_PATH))
-                {
-                    continue;
-                }
+                if (path.Equals(FR2_Cache.DEFAULT_CACHE_PATH)) continue;
 
                 if (FR2_Setting.IgnoreAsset.Contains(path))
-                {
                     FR2_Setting.RemoveIgnore(path);
-                }
                 else
-                {
                     FR2_Setting.AddIgnore(path);
-                }
             }
         }
 
@@ -105,21 +91,15 @@ namespace vietlabs.fr2
         [MenuItem("Assets/FR2/Refresh")]
         public static void ForceRefreshSelection()
         {
-            var guids = Selection.assetGUIDs;
+            string[] guids = Selection.assetGUIDs;
             if (!FR2_Cache.isReady) return; // cache not ready!
 
             for (var i = 0; i < guids.Length; i++)
             {
                 string guid = guids[i];
-                if (guid == FR2_Cache.CachePath)
-                {
-                    continue;
-                }
+                if (guid == FR2_Cache.CachePath) continue;
 
-                if (!FR2_Asset.IsValidGUID(guid))
-                {
-                    continue;
-                }
+                if (!FR2_Asset.IsValidGUID(guid)) continue;
 
                 if (FR2_Cache.Api.AssetMap.ContainsKey(guid))
                 {
@@ -183,7 +163,7 @@ namespace vietlabs.fr2
                 return;
             }
 
-            var deps = GetSelectionDependencies();
+            List<Object> deps = GetSelectionDependencies();
             if (deps == null) return;
 
             Selection.objects = deps.ToArray();
@@ -203,10 +183,7 @@ namespace vietlabs.fr2
 
             for (int i = list.Count - 1; i >= 0; i--)
             {
-                if (list[i] is MonoScript)
-                {
-                    list.RemoveAt(i);
-                }
+                if (list[i] is MonoScript) list.RemoveAt(i);
             }
 
             //Debug.Log(i + ":" + list[i] + ":" + list[i].GetType());
@@ -223,12 +200,10 @@ namespace vietlabs.fr2
             // }
             //string guid_file = EditorGUIUtility.systemCopyBuffer;
             long toFileId = 0;
-            var string_arr = guid_file.Split('/');
-            if (string_arr.Length > 1)
-            {
-                toFileId = long.Parse(string_arr[1]);
-            }
+            string[] string_arr = guid_file.Split('/');
+            if (string_arr.Length > 1) toFileId = long.Parse(string_arr[1]);
             string guid = string_arr[0];
+
             // var wat = new System.Diagnostics.Stopwatch();
             // wat.Start();
             //validate clipboard guid
@@ -240,21 +215,19 @@ namespace vietlabs.fr2
                 return;
             }
 
-            var temp = FR2_Unity.Selection_AssetGUIDs;//cheat refresh selection, DO NOT delete
+            string[] temp = FR2_Unity.Selection_AssetGUIDs; //cheat refresh selection, DO NOT delete
             HashSet<string> guids_files = FR2_Unity._Selection_AssetGUIDs;
 
             var realKey = "";
-            foreach (var item in guids_files)
+            foreach (string item in guids_files)
             {
-                if (item.StartsWith(guid_file, System.StringComparison.Ordinal))
-                {
-                    realKey = item;
-                }
+                if (item.StartsWith(guid_file, StringComparison.Ordinal)) realKey = item;
             }
             if (string.IsNullOrEmpty(realKey))
             {
                 Debug.LogWarning("Clipboard guid <" + guid +
                     "> not found in Selection, you may not intentionally replace selection assets by clipboard guid");
+
                 //				foreach (var item in guids_files) {
                 //					Debug.Log ("item: " + item);
                 //				}
@@ -262,7 +235,7 @@ namespace vietlabs.fr2
             }
             guids_files.Remove(realKey);
             cacheSelection = new HashSet<string>();
-            foreach (var item in cacheSelection)
+            foreach (string item in cacheSelection)
             {
                 cacheSelection.Add(item);
             }
@@ -280,12 +253,12 @@ namespace vietlabs.fr2
 #endif
 
 
-            List<FR2_Asset> assetList = new List<FR2_Asset>();
+            var assetList = new List<FR2_Asset>();
             var lstFind = new List<string>();
-            foreach (var item in guids_files)
-            {
-                var arr = item.Split('/');
 
+            foreach (string item in guids_files)
+            {
+                string[] arr = item.Split('/');
                 string g = arr[0];
 
 #if REPLACE_SAME_TYPE
@@ -324,13 +297,8 @@ namespace vietlabs.fr2
                 //Debug.Log("type: " + mainType);
 #endif
                 lstFind.Add(g);
-
-                //                if (arr.Length > 1)
-                //                {
-                //                    long file = long.Parse(arr[1]);
-                //                    
-                //                }
             }
+
             if (lstFind.Count == 0)
             {
                 Debug.LogWarning("No new asset selected to replace, must select all duplications to replace");
@@ -341,36 +309,32 @@ namespace vietlabs.fr2
 
             //replace one by one
             listReplace = new Dictionary<string, ProcessReplaceData>();
-            lstThreads = new List<Thread>();
             for (int i = assetList.Count - 1; i >= 0; i--)
             {
-                //Debug.Log("FR2 Replace GUID : " + assetList[i].guid + " ---> " + guid + " : " + assetList[i].UsedByMap.Count + " assets updated");
+                Debug.Log("FR2 Replace GUID : " + assetList[i].guid + " ---> " + guid + " : " + assetList[i].UsedByMap.Count + " assets updated");
+
                 string fromId = assetList[i].guid;
 
                 List<FR2_Asset> arr = assetList[i].UsedByMap.Values.ToList();
                 for (var j = 0; j < arr.Count; j++)
                 {
                     FR2_Asset a = arr[j];
-                    if (!listReplace.ContainsKey(a.assetPath))
-                    {
-                        listReplace.Add(a.assetPath, new ProcessReplaceData());
-                    }
+                    if (!listReplace.ContainsKey(a.assetPath)) listReplace.Add(a.assetPath, new ProcessReplaceData());
 
                     listReplace[a.assetPath].datas.Add(new ReplaceData
                     {
                         from = fromId,
                         to = guid,
                         asset = a,
-
                         toFileId = toFileId
                     });
                 }
             }
 
-            foreach (KeyValuePair<string, ProcessReplaceData> item in listReplace)
-            {
-                item.Value.processIndex = item.Value.datas.Count - 1;
-            }
+            // foreach (KeyValuePair<string, ProcessReplaceData> item in listReplace)
+            // {
+            //     item.Value.processIndex = item.Value.datas.Count - 1;
+            // }
 
             IsMergeProcessing = true;
             EditorApplication.update -= ApplicationUpdate;
@@ -410,92 +374,83 @@ namespace vietlabs.fr2
 
         private static void ApplicationUpdate()
         {
-            bool notComplete = listReplace.Where(x => x.Value.processIndex >= 0).Count() > 0;
-            if (lstThreads.Count <= 0 && notComplete)
+            var isCompleted = true;
+            foreach (KeyValuePair<string, ProcessReplaceData> item in listReplace)
             {
-                foreach (KeyValuePair<string, ProcessReplaceData> item in listReplace)
-                {
-                    if (item.Value.processIndex >= 0)
-                    {
-                        ReplaceData a = item.Value.datas[item.Value.processIndex--];
-                        a.isTerrian = a.asset.type == FR2_AssetType.TERRAIN;
-                        if (a.isTerrian)
-                        {
-                            a.terrainData =
-                                AssetDatabase.LoadAssetAtPath(a.asset.assetPath, typeof(Object)) as TerrainData;
-                        }
+                if (item.Value.processed) continue;
+                item.Value.processed = true;
 
-                        a.isSucess = a.asset.ReplaceReference(a.from, a.to, a.toFileId, a.terrainData);
+                for (var i = 0; i < item.Value.datas.Count; i++)
+                {
+                    ReplaceData a = item.Value.datas[i];
+                    a.isTerrian = a.asset.type == FR2_AssetType.TERRAIN;
+                    if (a.isTerrian)
+                    {
+                        a.terrainData = AssetDatabase.LoadAssetAtPath(a.asset.assetPath, typeof(Object)) as TerrainData;
+                    }
+                    a.isSucess = a.asset.ReplaceReference(a.from, a.to, a.toFileId, a.terrainData);
+
+                    if (a.isTerrian)
+                    {
+                        a.terrainData = null;
+                        FR2_Unity.UnloadUnusedAssets();
                     }
                 }
+
+                isCompleted = false;
+                break;
             }
 
-            for (int i = lstThreads.Count - 1; i >= 0; i--)
+            if (!isCompleted) return;
+            foreach (KeyValuePair<string, ProcessReplaceData> item in listReplace)
             {
-                if (!lstThreads[i].IsAlive)
+                List<ReplaceData> lst = item.Value.datas;
+                for (var i = 0; i < lst.Count; i++)
                 {
-                    lstThreads.RemoveAt(i);
-                }
-            }
-
-            //if (lstThreads.Count <= 0 && !notComplete) //complete 
-            {
-
-                foreach (KeyValuePair<string, ProcessReplaceData> item in listReplace)
-                {
-                    List<ReplaceData> lst = item.Value.datas;
-                    for (var i = 0; i < lst.Count; i++)
+                    ReplaceData data = lst[i];
+                    if (!data.isUpdated && data.isSucess)
                     {
-                        ReplaceData data = lst[i];
-                        if (!data.isUpdated && data.isSucess)
+                        data.isUpdated = true;
+                        if (data.isTerrian)
                         {
-                            data.isUpdated = true;
-                            if (data.isTerrian)
+                            EditorUtility.SetDirty(data.terrainData);
+                            AssetDatabase.SaveAssets();
+                            data.terrainData = null;
+                            FR2_Unity.UnloadUnusedAssets();
+                        } else
+                            try
                             {
-                                EditorUtility.SetDirty(data.terrainData);
-                                AssetDatabase.SaveAssets();
-                                data.terrainData = null;
-                                FR2_Unity.UnloadUnusedAssets();
+                                AssetDatabase.ImportAsset(data.asset.assetPath, ImportAssetOptions.Default);
+                            } catch (Exception e)
+                            {
+                                Debug.LogWarning(data.asset.assetPath + "\n" + e);
                             }
-                            else
-                            {
-								try 
-								{
-									AssetDatabase.ImportAsset(data.asset.assetPath, ImportAssetOptions.Default);
-								}
-								catch (Exception e)
-								{
-									Debug.LogWarning(data.asset.assetPath + "\n" + e);
-								}
-								
-							}
-						}
-					}
-				}
-                var guidsRefreshed = new HashSet<string>();
-                EditorApplication.update -= ApplicationUpdate;
-                foreach (KeyValuePair<string, ProcessReplaceData> item in listReplace)
-                {
-                    List<ReplaceData> lst = item.Value.datas;
-                    for (var i = 0; i < lst.Count; i++)
-                    {
-                        ReplaceData data = lst[i];
-                        if (data.isSucess && !guidsRefreshed.Contains(data.asset.guid))
-                        {
-                            guidsRefreshed.Add(data.asset.guid);
-                            FR2_Cache.Api.RefreshAsset(data.asset.guid, true);
-                        }
                     }
                 }
-
-                lstThreads = null;
-                listReplace = null;
-                FR2_Cache.Api.RefreshSelection();
-                FR2_Cache.Api.Check4Work();
-
-                AssetDatabase.Refresh();
-                IsMergeProcessing = false;
             }
+            var guidsRefreshed = new HashSet<string>();
+            EditorApplication.update -= ApplicationUpdate;
+            foreach (KeyValuePair<string, ProcessReplaceData> item in listReplace)
+            {
+                List<ReplaceData> lst = item.Value.datas;
+                for (var i = 0; i < lst.Count; i++)
+                {
+                    ReplaceData data = lst[i];
+                    if (data.isSucess && !guidsRefreshed.Contains(data.asset.guid))
+                    {
+                        guidsRefreshed.Add(data.asset.guid);
+                        FR2_Cache.Api.RefreshAsset(data.asset.guid, true);
+                    }
+                }
+            }
+
+            // lstThreads = null;
+            listReplace = null;
+            FR2_Cache.Api.RefreshSelection();
+            FR2_Cache.Api.Check4Work();
+
+            AssetDatabase.Refresh();
+            IsMergeProcessing = false;
         }
 
 
@@ -530,10 +485,7 @@ namespace vietlabs.fr2
             List<FR2_Asset> list = FR2_Cache.Api.FindAssets(FR2_Unity.Selection_AssetGUIDs, false);
             var dict = new Dictionary<string, Object>();
 
-            if (includeMe)
-            {
-                AddToDict(dict, list.ToArray());
-            }
+            if (includeMe) AddToDict(dict, list.ToArray());
 
             for (var i = 0; i < list.Count; i++)
             {
@@ -548,10 +500,7 @@ namespace vietlabs.fr2
             List<FR2_Asset> list = FR2_Cache.Api.FindAssets(FR2_Unity.Selection_AssetGUIDs, false);
             var dict = new Dictionary<string, Object>();
 
-            if (includeMe)
-            {
-                AddToDict(dict, list.ToArray());
-            }
+            if (includeMe) AddToDict(dict, list.ToArray());
 
             for (var i = 0; i < list.Count; i++)
             {
@@ -597,7 +546,7 @@ namespace vietlabs.fr2
         private class ProcessReplaceData
         {
             public readonly List<ReplaceData> datas = new List<ReplaceData>();
-            public int processIndex;
+            public bool processed;
         }
 
         private class ReplaceData

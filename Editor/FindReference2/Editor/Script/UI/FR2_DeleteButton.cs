@@ -1,41 +1,43 @@
 ﻿using System;
 using UnityEditor;
 using UnityEngine;
-using vietlabs.fr2;
 
-public class FR2_DeleteButton
+namespace vietlabs.fr2
 {
-    public string warningMessage;
-    public string confirmMessage;
-    public GUIContent deleteLabel;
-    public bool hasConfirm;
-
-    public bool Draw(Action onConfirmDelete)
+    internal class FR2_DeleteButton
     {
-        GUILayout.BeginHorizontal();
+        public string confirmMessage;
+        public GUIContent deleteLabel;
+        public bool hasConfirm;
+        public string warningMessage;
+
+        public bool Draw(Action onConfirmDelete)
         {
-            EditorGUILayout.HelpBox(warningMessage, MessageType.Warning);
-            GUILayout.BeginVertical();
+            GUILayout.BeginHorizontal();
             {
-                GUILayout.Space(2f);
-                hasConfirm = GUILayout.Toggle(hasConfirm, confirmMessage);
-                EditorGUI.BeginDisabledGroup(!hasConfirm);
+                EditorGUILayout.HelpBox(warningMessage, MessageType.Warning);
+                GUILayout.BeginVertical();
                 {
-                    GUI2.BackgroundColor(() =>
+                    GUILayout.Space(2f);
+                    hasConfirm = GUILayout.Toggle(hasConfirm, confirmMessage);
+                    EditorGUI.BeginDisabledGroup(!hasConfirm);
                     {
-                        if (GUILayout.Button(deleteLabel, EditorStyles.miniButton))
+                        GUI2.BackgroundColor(() =>
                         {
-                            hasConfirm = false;
-                            onConfirmDelete();
-                            GUIUtility.ExitGUI();
-                        }
-                    }, GUI2.darkRed, 0.8f);
+                            if (GUILayout.Button(deleteLabel, EditorStyles.miniButton))
+                            {
+                                hasConfirm = false;
+                                onConfirmDelete();
+                                GUIUtility.ExitGUI();
+                            }
+                        }, GUI2.darkRed, 0.8f);
+                    }
+                    EditorGUI.EndDisabledGroup();
                 }
-                EditorGUI.EndDisabledGroup();
+                GUILayout.EndVertical();
             }
-            GUILayout.EndVertical();
+            GUILayout.EndHorizontal();
+            return false;
         }
-        GUILayout.EndHorizontal();
-        return false;
     }
 }

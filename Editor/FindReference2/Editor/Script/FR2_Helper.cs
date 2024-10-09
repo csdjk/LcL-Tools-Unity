@@ -2,11 +2,22 @@
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-
 namespace vietlabs.fr2
 {
-    public class FR2_Helper
+    internal static class FR2_Helper
     {
+        internal static HashSet<T> ToHashSet<T>(this IEnumerable<T> collection)
+        {
+            var result = new HashSet<T>();
+            if (collection == null) return result;
+            
+            foreach (var item in collection)
+            {
+                result.Add(item);
+            }
+            return result;
+        }
+        
         internal static readonly AssetType[] FILTERS =
         {
             new AssetType("Scene", ".unity"),
@@ -28,7 +39,7 @@ namespace vietlabs.fr2
             new AssetType("Animation", ".anim", ".controller", ".overridecontroller", ".mask"),
             new AssetType("Unity Asset", ".asset", ".guiskin", ".flare", ".fontsettings", ".prefs"),
             new AssetType("Others") //
-		};
+        };
 
         public static IEnumerable<GameObject> getAllObjsInCurScene()
         {
@@ -63,13 +74,9 @@ namespace vietlabs.fr2
                     {
                         yield return item;
                     }
-                }
-                finally
+                } finally
                 {
-                    if (temp != null)
-                    {
-                        Object.DestroyImmediate(temp);
-                    }
+                    if (temp != null) Object.DestroyImmediate(temp);
                 }
             }
         }
@@ -96,7 +103,6 @@ namespace vietlabs.fr2
         public static IEnumerable<GameObject> getAllChild(GameObject target)
         {
             if (target.transform.childCount > 0)
-            {
                 for (var i = 0; i < target.transform.childCount; i++)
                 {
                     yield return target.transform.GetChild(i).gameObject;
@@ -105,7 +111,6 @@ namespace vietlabs.fr2
                         yield return item;
                     }
                 }
-            }
         }
 
         public static IEnumerable<Object> GetAllRefObjects(GameObject obj)
@@ -113,24 +118,15 @@ namespace vietlabs.fr2
             Component[] components = obj.GetComponents<Component>();
             foreach (Component com in components)
             {
-                if (com == null)
-                {
-                    continue;
-                }
+                if (com == null) continue;
 
                 var serialized = new SerializedObject(com);
                 SerializedProperty it = serialized.GetIterator().Copy();
                 while (it.NextVisible(true))
                 {
-                    if (it.propertyType != SerializedPropertyType.ObjectReference)
-                    {
-                        continue;
-                    }
+                    if (it.propertyType != SerializedPropertyType.ObjectReference) continue;
 
-                    if (it.objectReferenceValue == null)
-                    {
-                        continue;
-                    }
+                    if (it.objectReferenceValue == null) continue;
 
                     yield return it.objectReferenceValue;
                 }
@@ -139,15 +135,9 @@ namespace vietlabs.fr2
 
         public static int StringMatch(string pattern, string input)
         {
-            if (input == pattern)
-            {
-                return int.MaxValue;
-            }
+            if (input == pattern) return int.MaxValue;
 
-            if (input.Contains(pattern))
-            {
-                return int.MaxValue - 1;
-            }
+            if (input.Contains(pattern)) return int.MaxValue - 1;
 
             var pidx = 0;
             var score = 0;
@@ -160,15 +150,9 @@ namespace vietlabs.fr2
                 {
                     tokenScore += tokenScore + 1; //increasing score for continuos token
                     pidx++;
-                    if (pidx >= pattern.Length)
-                    {
-                        break;
-                    }
-                }
-                else
-                {
+                    if (pidx >= pattern.Length) break;
+                } else
                     tokenScore = 0;
-                }
 
                 score += tokenScore;
             }
@@ -180,10 +164,7 @@ namespace vietlabs.fr2
         {
             for (var i = 0; i < FILTERS.Length - 1; i++)
             {
-                if (FILTERS[i].extension.Contains(ext))
-                {
-                    return i;
-                }
+                if (FILTERS[i].extension.Contains(ext)) return i;
             }
 
             return FILTERS.Length - 1; //Others

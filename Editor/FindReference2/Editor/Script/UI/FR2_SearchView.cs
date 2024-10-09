@@ -1,16 +1,15 @@
 using UnityEditor;
 using UnityEngine;
-
 namespace vietlabs.fr2
 {
-    public class FR2_SearchView
+    internal class FR2_SearchView
     {
-        private bool caseSensitive;
-        private string searchTerm = string.Empty;
 
         public static GUIStyle toolbarSearchField;
         public static GUIStyle toolbarSearchFieldCancelButton;
         public static GUIStyle toolbarSearchFieldCancelButtonEmpty;
+        private bool caseSensitive;
+        private string searchTerm = string.Empty;
 
         public static void InitSearchStyle()
         {
@@ -21,16 +20,13 @@ namespace vietlabs.fr2
 
         public bool DrawLayout()
         {
-            bool dirty = false;
+            var dirty = false;
 
-            if (toolbarSearchField == null)
-            {
-                InitSearchStyle();
-            }
+            if (toolbarSearchField == null) InitSearchStyle();
 
             GUILayout.BeginHorizontal(EditorStyles.toolbar);
             {
-                bool v = GUILayout.Toggle(caseSensitive, "Aa", EditorStyles.toolbarButton, GUILayout.Width(24f));
+                bool v = GUILayout.Toggle(caseSensitive, "Aa", EditorStyles.toolbarButton, GUI2.GLW_24);
                 if (v != caseSensitive)
                 {
                     caseSensitive = v;
@@ -38,7 +34,7 @@ namespace vietlabs.fr2
                 }
 
                 GUILayout.Space(2f);
-                string value = GUILayout.TextField(searchTerm, toolbarSearchField, GUILayout.Width(140f));
+                string value = GUILayout.TextField(searchTerm, toolbarSearchField, GUI2.GLW_140);
                 if (searchTerm != value)
                 {
                     searchTerm = value;

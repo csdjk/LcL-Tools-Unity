@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
 using UnityEditor;
 using UnityEngine;
-using Object = UnityEngine.Object;
+using UnityObject = UnityEngine.Object;
 
 #if UNITY_5_3_OR_NEWER
 #endif
@@ -13,9 +11,45 @@ namespace vietlabs.fr2
 {
     // filter, ignore anh huong ket qua thi hien mau do
     // optimize lag duplicate khi use
-    public class FR2_WindowAll : FR2_WindowBase, IHasCustomMenu
+    [Serializable] internal class SelectHistory
     {
+        public bool isSceneAssets;
+        public UnityObject[] selection;
 
+        public bool IsTheSame(UnityObject[] objects)
+        {
+            if (objects.Length != selection.Length) return false;
+            var j = 0;
+            for (; j < objects.Length; j++)
+            {
+                if (selection[j] != objects[j]) break;
+            }
+            return j == objects.Length;
+        }
+    }
+    
+    [Serializable] internal class PanelSettings
+    {
+        public bool selection = false;
+        public bool horzLayout = false;
+        public bool scene = true;
+        public bool asset = true;
+        public bool details = false;
+        public bool bookmark = false;
+        public bool toolMode = false;
+        
+        public FR2_RefDrawer.Mode toolGroupMode = FR2_RefDrawer.Mode.Type;
+        public FR2_RefDrawer.Mode groupMode = FR2_RefDrawer.Mode.Dependency;
+        public FR2_RefDrawer.Sort sortMode = FR2_RefDrawer.Sort.Path;
+
+        public int historyIndex;
+        public List<SelectHistory> history = new List<SelectHistory>();
+    } 
+    
+    internal class FR2_WindowAll : FR2_WindowBase, IHasCustomMenu
+    {
+        [SerializeField] internal PanelSettings settings = new PanelSettings();
+        
         [MenuItem("Window/Find Reference 2")]
         private static void ShowWindow()
         {
@@ -24,75 +58,82 @@ namespace vietlabs.fr2
             FR2_Unity.SetWindowTitle(_window, "FR2");
             _window.Show();
         }
-
+        
         [NonSerialized] internal FR2_Bookmark bookmark;
         [NonSerialized] internal FR2_Selection selection;
         [NonSerialized] internal FR2_UsedInBuild UsedInBuild;
         [NonSerialized] internal FR2_DuplicateTree2 Duplicated;
         [NonSerialized] internal FR2_RefDrawer RefUnUse;
 
-        [NonSerialized] internal FR2_RefDrawer UsesDrawer;          // [Selected Assets] are [USING] (depends on / contains reference to) ---> those assets
-        [NonSerialized] internal FR2_RefDrawer UsedByDrawer;        // [Selected Assets] are [USED BY] <---- those assets 
-        [NonSerialized] internal FR2_RefDrawer SceneToAssetDrawer;  // [Selected GameObjects in current Scene] are [USING] ---> those assets
-
-        [NonSerialized] internal FR2_RefDrawer RefInScene;          // [Selected Assets] are [USED BY] <---- those components in current Scene 
-        [NonSerialized] internal FR2_RefDrawer SceneUsesDrawer;     // [Selected GameObjects] are [USING] ---> those components / GameObjects in current scene
-        [NonSerialized] internal FR2_RefDrawer RefSceneInScene;     // [Selected GameObjects] are [USED BY] <---- those components / GameObjects in current scene
+        [NonSerialized] internal FR2_RefDrawer UsesDrawer; // [Selected Assets] are [USING] (depends on / contains reference to) ---> those assets
+        [NonSerialized] internal FR2_RefDrawer UsedByDrawer; // [Selected Assets] are [USED BY] <---- those assets 
+        [NonSerialized] internal FR2_RefDrawer SceneToAssetDrawer; // [Selected GameObjects in current Scene] are [USING] ---> those assets
+        [NonSerialized] internal FR2_AddressableDrawer AddressableDrawer;
+        
+        
+        [NonSerialized] internal FR2_RefDrawer RefInScene; // [Selected Assets] are [USED BY] <---- those components in current Scene 
+        [NonSerialized] internal FR2_RefDrawer SceneUsesDrawer; // [Selected GameObjects] are [USING] ---> those components / GameObjects in current scene
+        [NonSerialized] internal FR2_RefDrawer RefSceneInScene; // [Selected GameObjects] are [USED BY] <---- those components / GameObjects in current scene
 
 
         internal int level;
         private Vector2 scrollPos;
         private string tempGUID;
-        private Object tempObject;
+        private string tempFileID;
+        private UnityObject tempObject;
 
-        protected bool lockSelection
-        {
-            get { return selection != null && selection.isLock; }
-        }
+        protected bool lockSelection => (selection != null) && selection.isLock;
 
         private void OnEnable()
         {
             Repaint();
         }
-
+        
         protected void InitIfNeeded()
         {
             if (UsesDrawer != null) return;
 
-            UsesDrawer = new FR2_RefDrawer(this)
+            UsesDrawer = new FR2_RefDrawer(this, ()=> settings.sortMode, ()=> settings.groupMode)
             {
                 messageEmpty = "[Selected Assets] are not [USING] (depends on / contains reference to) any other assets!"
             };
 
-            UsedByDrawer = new FR2_RefDrawer(this)
+            UsedByDrawer = new FR2_RefDrawer(this, ()=> settings.sortMode, ()=> settings.groupMode)
             {
                 messageEmpty = "[Selected Assets] are not [USED BY] any other assets!"
             };
 
-            Duplicated = new FR2_DuplicateTree2(this);
-            SceneToAssetDrawer = new FR2_RefDrawer(this)
+            AddressableDrawer = new FR2_AddressableDrawer(this, () => settings.sortMode, () => settings.groupMode);
+            
+            Duplicated = new FR2_DuplicateTree2(this, ()=> settings.sortMode, ()=> settings.toolGroupMode);
+            SceneToAssetDrawer = new FR2_RefDrawer(this, ()=> settings.sortMode, ()=> settings.groupMode)
             {
                 messageEmpty = "[Selected GameObjects] (in current open scenes) are not [USING] any assets!"
             };
 
-            RefUnUse = new FR2_RefDrawer(this);
-            RefUnUse.groupDrawer.hideGroupIfPossible = true;
+            RefUnUse = new FR2_RefDrawer(this, ()=> settings.sortMode, ()=> settings.toolGroupMode)
+            {
+                groupDrawer =
+                {
+                    hideGroupIfPossible = true
+                }
+            };
 
-            UsedInBuild = new FR2_UsedInBuild(this);
-            bookmark = new FR2_Bookmark(this);
-            selection = new FR2_Selection(this);
+            UsedInBuild = new FR2_UsedInBuild(this, ()=> settings.sortMode, ()=> settings.toolGroupMode);
+            bookmark = new FR2_Bookmark(this, ()=> settings.sortMode, ()=> settings.groupMode);
+            selection = new FR2_Selection(this,()=> settings.sortMode, ()=> settings.groupMode);
 
-            SceneUsesDrawer = new FR2_RefDrawer(this)
+            SceneUsesDrawer = new FR2_RefDrawer(this, ()=> settings.sortMode, ()=> settings.groupMode)
             {
                 messageEmpty = "[Selected GameObjects] are not [USING] any other GameObjects in scenes"
             };
 
-            RefInScene = new FR2_RefDrawer(this)
+            RefInScene = new FR2_RefDrawer(this, ()=> settings.sortMode, ()=> settings.groupMode)
             {
                 messageEmpty = "[Selected Assets] are not [USED BY] any GameObjects in opening scenes!"
             };
 
-            RefSceneInScene = new FR2_RefDrawer(this)
+            RefSceneInScene = new FR2_RefDrawer(this, ()=> settings.sortMode, ()=> settings.groupMode)
             {
                 messageEmpty = "[Selected GameObjects] are not [USED BY] by any GameObjects in opening scenes!"
             };
@@ -111,6 +152,16 @@ namespace vietlabs.fr2
             FR2_Setting.OnIgnoreChange -= OnIgnoreChanged;
             FR2_Setting.OnIgnoreChange += OnIgnoreChanged;
 
+            int idx = settings.historyIndex;
+            if (idx != -1 && settings.history.Count > idx)
+            {
+                SelectHistory h = settings.history[idx];
+                Selection.objects = h.selection;
+                settings.historyIndex = idx;
+                RefreshOnSelectionChange();
+                Repaint();
+            }
+            
             Repaint();
         }
 
@@ -127,34 +178,24 @@ namespace vietlabs.fr2
         {
             RefUnUse.ResetUnusedAsset();
             UsedInBuild.SetDirty();
-
             OnSelectionChange();
         }
         protected void OnCSVClick()
         {
             FR2_Ref[] csvSource = null;
-            var drawer = GetAssetDrawer();
+            FR2_RefDrawer drawer = GetAssetDrawer();
 
             if (drawer != null) csvSource = drawer.source;
 
-            if (IsFocusingUnused && csvSource == null)
-            {
-                csvSource = RefUnUse.source;
-                //if (csvSource != null) Debug.Log("d : " + csvSource.Length);
-            }
+            if (isFocusingUnused && (csvSource == null)) csvSource = RefUnUse.source;
 
-            if (IsFocusingUsedInBuild && csvSource == null)
-            {
-                csvSource = FR2_Ref.FromDict(UsedInBuild.refs);
-                //if (csvSource != null) Debug.Log("e : " + csvSource.Length);
-            }
+            //if (csvSource != null) Debug.Log("d : " + csvSource.Length);
+            if (isFocusingUsedInBuild && (csvSource == null)) csvSource = FR2_Ref.FromDict(UsedInBuild.refs);
 
-            if (IsFocusingDuplicate && csvSource == null)
-            {
-                csvSource = FR2_Ref.FromList(Duplicated.list);
-                //if (csvSource != null) Debug.Log("f : " + csvSource.Length);
-            }
+            //if (csvSource != null) Debug.Log("e : " + csvSource.Length);
+            if (isFocusingDuplicate && (csvSource == null)) csvSource = FR2_Ref.FromList(Duplicated.list);
 
+            //if (csvSource != null) Debug.Log("f : " + csvSource.Length);
             FR2_Export.ExportCSV(csvSource);
         }
 
@@ -162,87 +203,149 @@ namespace vietlabs.fr2
         {
             OnSelectionChange();
         }
+        
+        void AddHistory()
+        {
+            UnityObject[] objects = Selection.objects;
+            
+            // Check if the same set of selection has already existed
+            RefreshHistoryIndex(objects);
+            if (settings.historyIndex != -1) return;
+            
+            // Add newly selected objects to the selection
+            const int MAX_HISTORY_LENGTH = 10;
+            settings.history.Add(new SelectHistory { selection =  Selection.objects});
+            settings.historyIndex = settings.history.Count - 1;
+            if (settings.history.Count > MAX_HISTORY_LENGTH)
+            {
+                settings.history.RemoveRange(0, settings.history.Count-MAX_HISTORY_LENGTH);
+            }
+            EditorUtility.SetDirty(this);
+        }
+
+        void RefreshHistoryIndex(UnityObject[] objects)
+        {
+            if (this == null) return;
+            
+            settings.historyIndex = -1;
+            if (objects == null || objects.Length == 0) return;
+            List<SelectHistory> history = settings.history;
+            for (var i = 0; i < history.Count; i++)
+            {
+                SelectHistory h = history[i];
+                if (!h.IsTheSame(objects)) continue;
+                settings.historyIndex = i;
+            }
+            
+            EditorUtility.SetDirty(this);
+        }
+
+        bool isScenePanelVisible {
+            get
+            {
+                if (isFocusingAddressable) return false;
+                
+                if (selection.isSelectingAsset && isFocusingUses) // Override
+                {
+                    return false;
+                }
+                
+                if (!selection.isSelectingAsset && isFocusingUsedBy)
+                {
+                    return true;
+                }
+
+                return settings.scene;
+            }
+        }
+        
+        bool isAssetPanelVisible
+        {
+            get
+            {
+                if (isFocusingAddressable) return false;
+                
+                if (selection.isSelectingAsset && isFocusingUses) // Override
+                {
+                    return true;
+                }
+                
+                if (!selection.isSelectingAsset && isFocusingUsedBy)
+                {
+                    return false;
+                }
+                
+                return settings.asset;
+            }
+        }
+
+        void RefreshPanelVisible()
+        {
+            if (sp1 == null || sp2 == null) return;
+            sp2.splits[0].visible = isScenePanelVisible;
+            sp2.splits[1].visible = isAssetPanelVisible;
+            sp2.splits[2].visible = isFocusingAddressable;
+            sp2.CalculateWeight();
+        }
+        
+        void RefreshOnSelectionChange()
+        {
+            ids = FR2_Unity.Selection_AssetGUIDs;
+            selection.Clear();
+            
+            //ignore selection on asset when selected any object in scene
+            if ((Selection.gameObjects.Length > 0) && !FR2_Unity.IsInAsset(Selection.gameObjects[0]))
+            {
+                ids = Array.Empty<string>();
+                selection.AddRange(Selection.gameObjects);
+            } else
+            {
+                selection.AddRange(ids);
+            }
+            
+            level = 0;
+            RefreshPanelVisible();
+            
+            if (selection.isSelectingAsset)
+            {
+                UsesDrawer.Reset(ids, true);
+                UsedByDrawer.Reset(ids, false);
+                RefInScene.Reset(ids, this as IWindow);
+                AddressableDrawer.RefreshView();
+
+            } else
+            {
+                RefSceneInScene.ResetSceneInScene(Selection.gameObjects);
+                SceneToAssetDrawer.Reset(Selection.gameObjects, true, true);
+                SceneUsesDrawer.ResetSceneUseSceneObjects(Selection.gameObjects);
+            }
+        }
 
         public override void OnSelectionChange()
         {
             Repaint();
 
             isNoticeIgnore = false;
-            if (!FR2_Cache.isReady)
-            {
-                return;
-            }
+            if (!FR2_Cache.isReady) return;
 
-            if (focusedWindow == null)
-            {
-                return;
-            }
-
-            if (SceneUsesDrawer == null)
-            {
-                InitIfNeeded();
-            }
-
-            if (UsesDrawer == null)
-            {
-                InitIfNeeded();
-            }
+            if (focusedWindow == null) return;
+            if (SceneUsesDrawer == null) InitIfNeeded();
+            if (UsesDrawer == null) InitIfNeeded();
 
             if (!lockSelection)
             {
-                ids = FR2_Unity.Selection_AssetGUIDs;
-                selection.Clear();
-
-                //ignore selection on asset when selected any object in scene
-                if (Selection.gameObjects.Length > 0 && !FR2_Unity.IsInAsset(Selection.gameObjects[0]))
-                {
-                    ids = new string[0];
-                    selection.AddRange(Selection.gameObjects);
-                }
-                else
-                {
-                    selection.AddRange(ids);
-                }
-
-                level = 0;
-
-                if (selection.isSelectingAsset)
-                {
-                    UsesDrawer.Reset(ids, true);
-                    UsedByDrawer.Reset(ids, false);
-                    RefInScene.Reset(ids, this as IWindow);
-                }
-                else
-                {
-                    RefSceneInScene.ResetSceneInScene(Selection.gameObjects);
-                    SceneToAssetDrawer.Reset(Selection.gameObjects, true, true);
-                    SceneUsesDrawer.ResetSceneUseSceneObjects(Selection.gameObjects);
-                }
-
-                // auto disable enable scene / asset
-                if (IsFocusingUses)
-                {
-                    sp2.splits[0].visible = !selection.isSelectingAsset;
-                    sp2.splits[1].visible = true;
-                    sp2.CalculateWeight();
-                }
-
-                if (IsFocusingUsedBy)
-                {
-                    sp2.splits[0].visible = true;
-                    sp2.splits[1].visible = selection.isSelectingAsset;
-                    sp2.CalculateWeight();
-                }
+                RefreshOnSelectionChange();
+                RefreshHistoryIndex(Selection.objects);
             }
 
-            if (IsFocusingGUIDs)
+            if (isFocusingGUIDs)
             {
-                //objs = new Object[ids.Length];
-                objs = new Dictionary<string, Object>();
-                var objects = Selection.objects;
+                //guidObjs = new Object[ids.Length];
+                guidObjs = new Dictionary<string, UnityObject>();
+                UnityObject[] objects = Selection.objects;
                 for (var i = 0; i < objects.Length; i++)
                 {
-                    var item = objects[i];
+                    UnityObject item = objects[i];
 
 #if UNITY_2018_1_OR_NEWER
                     {
@@ -252,11 +355,11 @@ namespace vietlabs.fr2
                         {
                             if (AssetDatabase.TryGetGUIDAndLocalFileIdentifier(item, out guid, out fileid))
                             {
-                                objs.Add(guid + "/" + fileid, objects[i]);
-                                //Debug.Log("guid: " + guid + "  fileID: " + fileid);
+                                guidObjs.Add(guid + "/" + fileid, objects[i]);
                             }
-                        }
-                        catch { }
+
+                            //Debug.Log("guid: " + guid + "  fileID: " + fileid);
+                        } catch { }
                     }
 #else
 					{
@@ -281,13 +384,13 @@ namespace vietlabs.fr2
                         {
                             continue;
                         }
-                        if (!string.IsNullOrEmpty(guid)) objs.Add(guid + "/" + localId, objects[i]);
+                        if (!string.IsNullOrEmpty(guid)) guidObjs.Add(guid + "/" + localId, objects[i]);
 					}
 #endif
                 }
             }
 
-            if (IsFocusingUnused)
+            if (isFocusingUnused)
             {
                 RefUnUse.ResetUnusedAsset();
             }
@@ -302,49 +405,113 @@ namespace vietlabs.fr2
         }
 
 
-        public FR2_SplitView sp1;   // container : Selection / sp2 / Bookmark 
-        public FR2_SplitView sp2;   // Scene / Assets
+        [NonSerialized] public FR2_SplitView sp1; // container : Selection / sp2 / Bookmark 
+        [NonSerialized] public FR2_SplitView sp2; // Scene / Assets
+        [NonSerialized] public FR2_SplitView sp3; // Addressable
+        
+        private void DrawHistory(Rect rect)
+        {
+            Color c = GUI.backgroundColor;
+            GUILayout.BeginArea(rect);
+            GUILayout.BeginHorizontal();
+            
+            for (var i = 0; i < settings.history.Count; i++)
+            {
+                SelectHistory h = settings.history[i];
+                int idx = i;
+                GUI.backgroundColor = i == settings.historyIndex ? GUI2.darkBlue : c;
 
-        void InitPanes()
+                var content = new GUIContent($"{i + 1}", "RightClick to delete!");
+                if (GUILayout.Button(content, EditorStyles.miniButton, GUI2.GLW_24))
+                {
+                    // Debug.Log($"Button: {Event.current.button}");
+                    
+                    if (Event.current.button == 0) // left click
+                    {
+                        Selection.objects = h.selection;
+                        settings.historyIndex = idx;
+                        RefreshOnSelectionChange();
+                        Repaint();    
+                    }
+
+                    if (Event.current.button == 1) // right click
+                    {
+                        bool isActive = i == settings.historyIndex;
+                        settings.history.RemoveAt(idx);
+                        
+                        if (isActive && settings.history.Count > 0)
+                        {
+                            int idx2 = settings.history.Count - 1;
+                            Selection.objects = settings.history[idx2].selection;
+                            settings.historyIndex = idx2;
+                            RefreshOnSelectionChange();
+                            Repaint();
+                        }
+                    }
+                }
+                
+                
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
+            GUI.backgroundColor = c;
+        }
+
+        private void InitPanes()
         {
             sp2 = new FR2_SplitView(this)
             {
                 isHorz = false,
-                splits = new List<FR2_SplitView.Info>()
+                splits = new List<FR2_SplitView.Info>
                 {
-                    new FR2_SplitView.Info(){ title = new GUIContent("Scene", FR2_Icon.Scene.image), draw = DrawScene },
-                    new FR2_SplitView.Info(){ title = new GUIContent("Assets", FR2_Icon.Asset.image), draw = DrawAsset },
+                    new FR2_SplitView.Info
+                        { title = new GUIContent("Scene", FR2_Icon.Scene.image), draw = DrawScene, visible = settings.scene},
+                    new FR2_SplitView.Info
+                        { title = new GUIContent("Assets", FR2_Icon.Asset.image), draw = DrawAsset, visible = settings.asset },
+                    new FR2_SplitView.Info
+                        {title = null, draw = rect => AddressableDrawer.Draw(rect), visible = false }
                 }
             };
 
             sp2.CalculateWeight();
-
+            
             sp1 = new FR2_SplitView(this)
             {
                 isHorz = true,
-                splits = new List<FR2_SplitView.Info>()
+                splits = new List<FR2_SplitView.Info>
                 {
-                    new FR2_SplitView.Info(){ title = new GUIContent("Selection", FR2_Icon.Selection.image), weight = 0.4f, visible = false, draw = (rect) => selection.Draw(rect) },
-                    new FR2_SplitView.Info(){ draw = (r) =>
+                    new FR2_SplitView.Info
+                        { 
+                            title = new GUIContent("Selection", FR2_Icon.Selection.image),
+                            weight = 0.4f,
+                            visible = settings.selection,
+                            draw = rect =>
+                            {
+                                Rect historyRect = rect;
+                                historyRect.yMin = historyRect.yMax - 16f;
+                                
+                                rect.yMax -= 16f;
+                                selection.Draw(rect);
+                                DrawHistory(historyRect);
+                            }
+                        },
+                    new FR2_SplitView.Info
                     {
-                        if (IsFocusingUses || IsFocusingUsedBy)
+                        draw = r =>
                         {
                             sp2.Draw(r);
                         }
-                        else
+                    },
+                    new FR2_SplitView.Info
+                    {
+                        title = new GUIContent("Asset Detail", FR2_Icon.Details.image), weight = 0.4f, visible = settings.details, draw = rect =>
                         {
-                            DrawTools(r);
+                            FR2_RefDrawer assetDrawer = GetAssetDrawer();
+                            if (assetDrawer != null) assetDrawer.DrawDetails(rect);
                         }
-                    } },
-					new FR2_SplitView.Info(){ title = new GUIContent("Details", FR2_Icon.Details.image), weight = 0.4f, visible = true, draw = (rect) => 
-					{
-						var assetDrawer = GetAssetDrawer();
-						if (assetDrawer != null)
-						{
-							assetDrawer.DrawDetails(rect);
-						}
-					}},
-                    new FR2_SplitView.Info(){ title = new GUIContent("Bookmark", FR2_Icon.Favorite.image), weight = 0.4f, visible = false, draw = (rect) => bookmark.Draw(rect) }
+                    },
+                    new FR2_SplitView.Info
+                        { title = new GUIContent("Bookmark", FR2_Icon.Favorite.image), weight = 0.4f, visible = settings.bookmark, draw = rect => bookmark.Draw(rect) }
                 }
             };
 
@@ -352,32 +519,35 @@ namespace vietlabs.fr2
         }
 
         private FR2_TabView tabs;
+        private FR2_TabView toolTabs;
         private FR2_TabView bottomTabs;
         private FR2_SearchView search;
-
-        void DrawScene(Rect rect)
+        
+        private void DrawScene(Rect rect)
         {
-            FR2_RefDrawer drawer = IsFocusingUses
-                ? (selection.isSelectingAsset ? null : SceneUsesDrawer)
-                : (selection.isSelectingAsset ? RefInScene : RefSceneInScene);
+            FR2_RefDrawer drawer = isFocusingUses
+                ? selection.isSelectingAsset ? null : SceneUsesDrawer
+                : selection.isSelectingAsset
+                    ? RefInScene
+                    : RefSceneInScene;
             if (drawer == null) return;
 
             if (!FR2_SceneCache.ready)
             {
-                var rr = rect;
+                Rect rr = rect;
                 rr.height = 16f;
 
                 int cur = FR2_SceneCache.Api.current, total = FR2_SceneCache.Api.total;
-                EditorGUI.ProgressBar(rr, cur * 1f / total, string.Format("{0} / {1}", cur, total));
+                EditorGUI.ProgressBar(rr, cur * 1f / total, $"{cur} / {total}");
                 WillRepaint = true;
                 return;
             }
-			
+
             drawer.Draw(rect);
 
             var refreshRect = new Rect(rect.xMax - 16f, rect.yMin - 14f, 18f, 18f);
             if (GUI2.ColorIconButton(refreshRect, FR2_Icon.Refresh.image,
-                FR2_SceneCache.Api.Dirty ? (Color?)GUI2.lightRed : null))
+                FR2_SceneCache.Api.Dirty ? GUI2.lightRed : (Color?)null))
             {
                 FR2_SceneCache.Api.refreshCache(drawer.window);
             }
@@ -385,28 +555,30 @@ namespace vietlabs.fr2
 
 
 
-        FR2_RefDrawer GetAssetDrawer()
+        private FR2_RefDrawer GetAssetDrawer()
         {
-            if (IsFocusingUses)
-            {
-                return selection.isSelectingAsset ? UsesDrawer : SceneToAssetDrawer;
-            }
-
-            if (IsFocusingUsedBy)
-            {
-                return selection.isSelectingAsset ? UsedByDrawer : null;
-            }
-
+            if (isFocusingUses) return selection.isSelectingAsset ? UsesDrawer : SceneToAssetDrawer;
+            if (isFocusingUsedBy) return selection.isSelectingAsset ? UsedByDrawer : null;
+            if (isFocusingAddressable) return AddressableDrawer.drawer;
             return null;
         }
 
-        void DrawAsset(Rect rect)
+        private void DrawAsset(Rect rect)
         {
-            var drawer = GetAssetDrawer();
-			if (drawer != null) drawer.Draw(rect);
+            FR2_RefDrawer drawer = GetAssetDrawer();
+            if (drawer == null) return;
+            drawer.Draw(rect);
+
+            if (!drawer.showDetail) return;
+            
+            settings.details = true;
+            drawer.showDetail = false;
+            sp1.splits[2].visible = settings.details;
+            sp1.CalculateWeight();
+            Repaint();
         }
 
-        void DrawSearch()
+        private void DrawSearch()
         {
             if (search == null) search = new FR2_SearchView();
             search.DrawLayout();
@@ -414,19 +586,23 @@ namespace vietlabs.fr2
 
         protected override void OnGUI()
         {
-            OnGUI2();
+			// UnityEngine.Profiling.Profiler.BeginSample("FR2-OnGUI");
+            // {
+                OnGUI2();
+            // }
+			// UnityEngine.Profiling.Profiler.EndSample();
         }
-
+        
         protected bool CheckDrawImport()
         {
-            if (EditorApplication.isCompiling)
+            if (FR2_Unity.isEditorCompiling)
             {
                 EditorGUILayout.HelpBox("Compiling scripts, please wait!", MessageType.Warning);
                 Repaint();
                 return false;
             }
 
-            if (EditorApplication.isUpdating)
+            if (FR2_Unity.isEditorUpdating)
             {
                 EditorGUILayout.HelpBox("Importing assets, please wait!", MessageType.Warning);
                 Repaint();
@@ -438,10 +614,7 @@ namespace vietlabs.fr2
             if (EditorSettings.serializationMode != SerializationMode.ForceText)
             {
                 EditorGUILayout.HelpBox("FR2 requires serialization mode set to FORCE TEXT!", MessageType.Warning);
-                if (GUILayout.Button("FORCE TEXT"))
-                {
-                    EditorSettings.serializationMode = SerializationMode.ForceText;
-                }
+                if (GUILayout.Button("FORCE TEXT")) EditorSettings.serializationMode = SerializationMode.ForceText;
 
                 return false;
             }
@@ -460,162 +633,235 @@ namespace vietlabs.fr2
                 return false;
             }
 
-            if (!FR2_Cache.isReady)
+            if (FR2_Cache.isReady) return DrawEnable();
+            
+            if (!FR2_Cache.hasCache)
             {
-                if (!FR2_Cache.hasCache)
+                EditorGUILayout.HelpBox(
+                    "FR2 cache not found!\nFirst scan may takes quite some time to finish but you would be able to work normally while the scan works in background...",
+                    MessageType.Warning);
+
+                FR2_Cache.DrawPriorityGUI();
+
+                if (GUILayout.Button("Scan project"))
                 {
-                    EditorGUILayout.HelpBox(
-                        "FR2 cache not found!\nFirst scan may takes quite some time to finish but you would be able to work normally while the scan works in background...",
-                        MessageType.Warning);
-
-                    FR2_Cache.DrawPriorityGUI();
-
-                    if (GUILayout.Button("Scan project"))
-                    {
-                        FR2_Cache.CreateCache();
-                        Repaint();
-                    }
-
-                    return false;
-                }
-                else
-                {
-                    FR2_Cache.DrawPriorityGUI();
+                    FR2_Cache.CreateCache();
+                    Repaint();
                 }
 
-                if (!DrawEnable())
-                {
-                    return false;
-                }
+                return false;
+            }
+            FR2_Cache.DrawPriorityGUI();
 
-                FR2_Cache api = FR2_Cache.Api;
+            if (!DrawEnable()) return false;
+            
+            FR2_Cache api = FR2_Cache.Api;
+            if (api.workCount > 0)
+            {
                 string text = "Refreshing ... " + (int)(api.progress * api.workCount) + " / " + api.workCount;
                 Rect rect = GUILayoutUtility.GetRect(1f, Screen.width, 18f, 18f);
                 EditorGUI.ProgressBar(rect, api.progress, text);
-                Repaint();
-                return false;
-            }
-
-            if (!DrawEnable())
+                Repaint();    
+            } else
             {
-                return false;
+                // Debug.LogWarning("DONE????");
+                api.workCount = 0;
+                api.ready = true;
             }
-
-            return true;
+            
+            return false;
         }
 
-        protected bool IsFocusingUses { get { return tabs != null && tabs.current == 0; } }
-        protected bool IsFocusingUsedBy { get { return tabs != null && tabs.current == 1; } }
-        protected bool IsFocusingDuplicate { get { return tabs != null && tabs.current == 2; } }
-        protected bool IsFocusingGUIDs { get { return tabs != null && tabs.current == 3; } }
-        protected bool IsFocusingUnused { get { return tabs != null && tabs.current == 4; } }
-        protected bool IsFocusingUsedInBuild { get { return tabs != null && tabs.current == 5; } }
-
-        void OnTabChange()
+        protected bool isFocusingUses => (tabs != null) && (tabs.current == 0);
+        protected bool isFocusingUsedBy => (tabs != null) && (tabs.current == 1);
+        protected bool isFocusingAddressable => (tabs != null) && (tabs.current == 2);
+        
+        // 
+        protected bool isFocusingDuplicate => (toolTabs != null) && (toolTabs.current == 0);
+        protected bool isFocusingGUIDs => (toolTabs != null) && (toolTabs.current == 1);
+        protected bool isFocusingUnused => (toolTabs != null) && (toolTabs.current == 2);
+        protected bool isFocusingUsedInBuild => (toolTabs != null) && (toolTabs.current == 3);
+        
+        private static readonly HashSet<FR2_RefDrawer.Mode> allowedModes = new HashSet<FR2_RefDrawer.Mode>()
         {
+            FR2_RefDrawer.Mode.Type,
+            FR2_RefDrawer.Mode.Extension,
+            FR2_RefDrawer.Mode.Folder
+        };
+        
+        private void OnTabChange()
+        {
+            if (isFocusingUnused || isFocusingUsedInBuild)
+            {
+                if (!allowedModes.Contains(settings.groupMode))
+                {
+                    settings.groupMode = FR2_RefDrawer.Mode.Type;
+                }
+            }
+            
             if (deleteUnused != null) deleteUnused.hasConfirm = false;
             if (UsedInBuild != null) UsedInBuild.SetDirty();
         }
 
-        void InitTabs()
+        private void InitTabs()
         {
-            tabs = FR2_TabView.Create(this, false,
-                "Uses", "Used By", "Duplicate", "GUIDs", "Unused Assets", "Uses in Build"
+            bottomTabs = FR2_TabView.Create(this, true,
+                new GUIContent(FR2_Icon.Setting.image, "Settings"),
+                new GUIContent(FR2_Icon.Ignore.image, "Ignore"),
+                new GUIContent(FR2_Icon.Filter.image, "Filter by Type")
             );
-            tabs.onTabChange = OnTabChange;
-            tabs.callback = new DrawCallback()
+            bottomTabs.current = -1;
+            bottomTabs.flexibleWidth = false;
+            
+            toolTabs = FR2_TabView.Create(this, false, "Duplicate", "GUID", "Not Referenced", "In Build");
+
+            
+            if (FR2_Addressable.asmStatus == FR2_Addressable.ASMStatus.AsmNotFound)
+            { // No Addressable
+                tabs = FR2_TabView.Create(this, false, // , "Tools"
+                    "Uses", "Used By"
+                );
+            }
+            else
             {
-                BeforeDraw = () =>
+                tabs = FR2_TabView.Create(this, false, // , "Tools"
+                    "Uses", "Used By", "Addressables"
+                );
+            }
+            
+            
+            tabs.onTabChange = OnTabChange;
+            
+            const float IconW = 24f;
+            tabs.offsetFirst = IconW;
+            tabs.offsetLast = IconW * 5;
+            
+            tabs.callback = new DrawCallback
+            {
+                BeforeDraw = (rect) =>
                 {
+                    rect.width = IconW;
                     if (GUI2.ToolbarToggle(ref selection.isLock,
                         selection.isLock ? FR2_Icon.Lock.image : FR2_Icon.Unlock.image,
-                        new Vector2(-1, 2), "Lock Selection"))
+                        Vector2.zero, "Lock Selection", rect))
                     {
                         WillRepaint = true;
+                        OnSelectionChange();
+                        if (selection.isLock) AddHistory();
                     }
                 },
-
-                AfterDraw = () =>
+                
+                AfterDraw = (rect) =>
                 {
-                    //GUILayout.Space(16f);
-
-                    if (GUI2.ToolbarToggle(ref sp1.isHorz, FR2_Icon.Panel.image, Vector2.zero, "Layout"))
+                    rect.xMin = rect.xMax - IconW * 5;
+                    rect.width = IconW;
+                    
+                    if (GUI2.ToolbarToggle(ref settings.selection,
+                        FR2_Icon.Selection.image,
+                        Vector2.zero, "Show / Hide Selection", rect))
                     {
+                        sp1.splits[0].visible = settings.selection;
                         sp1.CalculateWeight();
                         Repaint();
                     }
-
-                    if (GUI2.ToolbarToggle(ref sp1.splits[0].visible, FR2_Icon.Selection.image, Vector2.zero, "Show / Hide Selection"))
+                    
+                    rect.x += IconW;
+                    if (GUI2.ToolbarToggle(ref settings.scene, FR2_Icon.Scene.image, Vector2.zero, "Show / Hide Scene References", rect))
                     {
+                        if (settings.asset == false && settings.scene == false)
+                        {
+                            settings.asset = true;
+                            sp2.splits[1].visible = settings.asset;
+                        }
+
+                        RefreshPanelVisible();
+                        Repaint();
+                    }
+                    
+                    rect.x += IconW;
+                    if (GUI2.ToolbarToggle(ref settings.asset, FR2_Icon.Asset.image, Vector2.zero, "Show / Hide Asset References", rect))
+                    {
+                        if (settings.asset == false && settings.scene == false)
+                        {
+                            settings.scene = true;
+                            sp2.splits[0].visible = settings.scene;
+                        }
+                        
+                        RefreshPanelVisible();
+                        Repaint();
+                    }
+                    
+                    rect.x += IconW;
+                    if (GUI2.ToolbarToggle(ref settings.details, FR2_Icon.Details.image, Vector2.zero, "Show / Hide Details", rect))
+                    {
+                        sp1.splits[2].visible = settings.details;
                         sp1.CalculateWeight();
                         Repaint();
                     }
-
-                    if (GUI2.ToolbarToggle(ref sp2.splits[0].visible, FR2_Icon.Scene.image, Vector2.zero, "Show / Hide Scene References"))
+                    
+                    rect.x += IconW;
+                    if (GUI2.ToolbarToggle(ref settings.bookmark, FR2_Icon.Favorite.image, Vector2.zero, "Show / Hide Bookmarks", rect))
                     {
-                        sp2.CalculateWeight();
-                        Repaint();
-                    }
-
-                    if (GUI2.ToolbarToggle(ref sp2.splits[1].visible, FR2_Icon.Asset.image, Vector2.zero, "Show / Hide Asset References"))
-                    {
-                        sp2.CalculateWeight();
-                        Repaint();
-                    }
-
-					if (GUI2.ToolbarToggle(ref sp1.splits[2].visible, FR2_Icon.Details.image, Vector2.zero, "Show / Hide Details"))
-                    {
-                        sp1.CalculateWeight();
-                        Repaint();
-                    }
-
-                    if (GUI2.ToolbarToggle(ref sp1.splits[3].visible, FR2_Icon.Favorite.image, Vector2.zero, "Show / Hide Bookmarks"))
-                    {
+                        sp1.splits[3].visible = settings.bookmark;
                         sp1.CalculateWeight();
                         Repaint();
                     }
                 }
             };
         }
-
-        protected bool DrawHeader()
-        {
-            if (tabs == null) InitTabs();
-            if (bottomTabs == null)
-            {
-                bottomTabs = FR2_TabView.Create(this, true,
-                    new GUIContent(FR2_Icon.Setting.image, "Settings"),
-                    new GUIContent(FR2_Icon.Ignore.image, "Ignore"),
-                    new GUIContent(FR2_Icon.Filter.image, "Filter by Type")
-                );
-                bottomTabs.current = -1;
-            }
-
-            tabs.DrawLayout();
-
-            return true;
-        }
-
-
-
-
+        
         protected bool DrawFooter()
         {
-            GUILayout.BeginHorizontal(EditorStyles.toolbar);
+            bottomTabs.DrawLayout();
+            var bottomBar = GUILayoutUtility.GetLastRect();
+
+            var buttonRect = bottomBar;
+            buttonRect.xMin = buttonRect.xMax - 24f;
+            
+            var viewModeRect = bottomBar;
+            viewModeRect.xMax -= 24f;
+            viewModeRect.xMin = viewModeRect.xMax - 200f;
+            
+            DrawViewModes(viewModeRect);
+            
+            Color oColor = GUI.color;
+            if (settings.toolMode) GUI.color = Color.green;
             {
-                bottomTabs.DrawLayout();
-                GUILayout.FlexibleSpace();
-                DrawAssetViewSettings();
-                GUILayout.FlexibleSpace();
-                DrawViewModes();
+                if (GUI.Button(buttonRect, FR2_Icon.CustomTool, EditorStyles.toolbarButton))
+                {
+                    settings.toolMode = !settings.toolMode;
+                    EditorUtility.SetDirty(this);
+                    WillRepaint = true;
+                }    
             }
-            GUILayout.EndHorizontal();
+            GUI.color = oColor;
+            
+            
+            // GUILayout.BeginHorizontal(EditorStyles.toolbar);
+            // {
+            //     bottomTabs.DrawLayout();
+            //     //DrawAssetViewSettings();
+            //     DrawViewModes();
+            //     
+            //     Color oColor = GUI.color;
+            //     if (settings.toolMode) GUI.color = Color.green;
+            //     {
+            //         if (GUILayout.Button(FR2_Icon.CustomTool, EditorStyles.toolbarButton, GUI2.GLW_24))
+            //         {
+            //             settings.toolMode = !settings.toolMode;
+            //             EditorUtility.SetDirty(this);
+            //             WillRepaint = true;
+            //         }    
+            //     }
+            //     GUI.color = oColor;
+            // }
+            // GUILayout.EndHorizontal();
             return false;
         }
 
-        void DrawAssetViewSettings()
+        private void DrawAssetViewSettings()
         {
-            var isDisable = !sp2.splits[1].visible;
+            bool isDisable = !sp2.splits[1].visible;
             EditorGUI.BeginDisabledGroup(isDisable);
             {
                 GUI2.ToolbarToggle(ref FR2_Setting.s.displayAssetBundleName, FR2_Icon.AssetBundle.image, Vector2.zero, "Show / Hide Assetbundle Names");
@@ -625,138 +871,190 @@ namespace vietlabs.fr2
                 GUI2.ToolbarToggle(ref FR2_Setting.s.showUsedByClassed, FR2_Icon.Material.image, Vector2.zero, "Show / Hide usage icons");
                 GUI2.ToolbarToggle(ref FR2_Setting.s.displayFileSize, FR2_Icon.Filesize.image, Vector2.zero, "Show / Hide file size");
 
-                if (GUILayout.Button("CSV", EditorStyles.toolbarButton))
-                {
-                    OnCSVClick();
-                }
+                if (GUILayout.Button("CSV", EditorStyles.toolbarButton)) OnCSVClick();
             }
             EditorGUI.EndDisabledGroup();
         }
 
-        void DrawViewModes()
+		FR2_EnumDrawer groupModeED;
+        FR2_EnumDrawer toolModeED;
+		FR2_EnumDrawer sortModeED;
+        
+        private void DrawViewModes(Rect rect)
         {
-            var gMode = FR2_Setting.GroupMode;
-            if (GUI2.EnumPopup(ref gMode, new GUIContent(FR2_Icon.Group.image, "Group by"), EditorStyles.toolbarPopup, GUILayout.Width(80f)))
+            var rect1 = rect;
+            rect1.width = rect.width / 2f;
+            
+            var rect2 = rect1;
+            rect2.x += rect1.width;
+            
+            if (toolModeED == null) toolModeED = new FR2_EnumDrawer()
             {
-                FR2_Setting.GroupMode = gMode;
-                markDirty();
+                fr2_enum = new FR2_EnumDrawer.EnumInfo(
+                    FR2_RefDrawer.Mode.Type,
+                    FR2_RefDrawer.Mode.Folder,
+                    FR2_RefDrawer.Mode.Extension
+                )
+            };
+            if (groupModeED == null) groupModeED = new FR2_EnumDrawer();
+			if (sortModeED == null) sortModeED = new FR2_EnumDrawer();
+
+            if (settings.toolMode)
+            {
+                var tMode = settings.toolGroupMode;
+                    if (toolModeED.Draw(rect1, ref tMode))
+                {
+                    settings.toolGroupMode = tMode;
+                    markDirty();
+                    RefreshSort();
+                }
+            } else
+            {
+                var gMode = settings.groupMode;
+                    if (groupModeED.Draw(rect1, ref gMode))
+                {
+                    // Debug.Log($"GroupMode: {gMode}");
+                    settings.groupMode = gMode;
+                    markDirty();
+                    RefreshSort();
+                }
             }
-
-            GUILayout.Space(16f);
-
-            var sMode = FR2_Setting.SortMode;
-            if (GUI2.EnumPopup(ref sMode, new GUIContent(FR2_Icon.Sort.image, "Sort by"), EditorStyles.toolbarPopup, GUILayout.Width(50f)))
+            
+            // GUILayout.Space(16f);
+            var sMode = settings.sortMode;
+                if (sortModeED.Draw(rect2, ref sMode))
             {
-                FR2_Setting.SortMode = sMode;
+                // Debug.Log($"sortMode: {sMode}");
+                settings.sortMode = sMode;
                 RefreshSort();
             }
         }
-
+        
+        // Save status to temp variable so the result will be consistent between Layout & Repaint
+        internal static int delayRepaint;
+        internal static bool checkDrawImportResult;
+        
+        
         protected void OnGUI2()
         {
-            if (!CheckDrawImport())
+            if (Event.current.type == EventType.Layout)
+            {
+                FR2_Unity.RefreshEditorStatus();
+            }
+
+            if (FR2_SettingExt.disable)
+            {
+                DrawEnable();
+                return;
+            }
+            
+            #if UNITY_2020
+            if (!FR2_CacheHelper.inited) 
+            {
+                EditorApplication.update -= FR2_CacheHelper.InitHelper;
+                EditorApplication.update += FR2_CacheHelper.InitHelper;
+                return;
+            }
+            #endif
+            
+            if (tabs == null) InitTabs();
+            if (sp1 == null) InitPanes();
+            
+            bool result = CheckDrawImport();
+            if (Event.current.type == EventType.Layout)
+            {
+                checkDrawImportResult = result;
+            }
+            
+            if (!checkDrawImportResult)
             {
                 return;
             }
-
-            if (sp1 == null) InitPanes();
-
-            DrawHeader();
-            sp1.DrawLayout();
+            
+            if (settings.toolMode)
+            {
+                EditorGUILayout.HelpBox(FR2_GUIContent.From("Tools are POWERFUL & DANGEROUS! Only use if you know what you are doing!!!", FR2_Icon.Warning.image));
+                toolTabs.DrawLayout();
+                DrawTools();
+            }
+            else
+            {   
+                tabs.DrawLayout();
+                sp1.DrawLayout();
+            }
+            
             DrawSettings();
             DrawFooter();
-
-            if (WillRepaint)
-            {
-                Repaint();
-            }
+            if (!WillRepaint) return;
+            WillRepaint = false;
+            Repaint();
         }
 
 
         private FR2_DeleteButton deleteUnused;
-
-
-
-        void DrawTools(Rect rect)
+        
+        private void DrawTools()
         {
-            if (IsFocusingDuplicate)
+            if (isFocusingDuplicate)
             {
-                rect = GUI2.Padding(rect, 2f, 2f);
-
-                GUILayout.BeginArea(rect);
                 Duplicated.DrawLayout();
-                GUILayout.EndArea();
+                GUILayout.FlexibleSpace();
                 return;
             }
 
-            if (IsFocusingUnused)
+            if (isFocusingUnused)
             {
-                rect = GUI2.Padding(rect, 2f, 2f);
-
-                if ((RefUnUse.refs != null && RefUnUse.refs.Count == 0))
+                if ((RefUnUse.refs != null) && (RefUnUse.refs.Count == 0))
                 {
-                    GUILayout.BeginArea(rect);
-                    {
-                        EditorGUILayout.HelpBox("Wow! So clean!?", MessageType.Info);
-                        EditorGUILayout.HelpBox("Your project does not has have any unused assets, or have you just hit DELETE ALL?", MessageType.Info);
-                        EditorGUILayout.HelpBox("Your backups are placed at Library/FR2/ just in case you want your assets back!", MessageType.Info);
-                    }
-                    GUILayout.EndArea();
-                }
-                else
+                    EditorGUILayout.HelpBox("Wow! So clean!?", MessageType.Info);
+                    EditorGUILayout.HelpBox("Your project does not has have any unused assets, or have you just hit DELETE ALL?", MessageType.Info);
+                    EditorGUILayout.HelpBox("Your backups are placed at Library/FR2/ just in case you want your assets back!", MessageType.Info);
+                } else
                 {
-                    rect.yMax -= 40f;
-                    GUILayout.BeginArea(rect);
                     RefUnUse.DrawLayout();
-                    GUILayout.EndArea();
-
-                    var toolRect = rect;
-                    toolRect.yMin = toolRect.yMax;
-
-                    var lineRect = toolRect;
-                    lineRect.height = 1f;
-
-                    GUI2.Rect(lineRect, Color.black, 0.5f);
-
-                    toolRect.xMin += 2f;
-                    toolRect.xMax -= 2f;
-                    toolRect.height = 40f;
-
-                    if (deleteUnused == null)
+                    
+                    if (deleteUnused == null) deleteUnused = new FR2_DeleteButton
                     {
-                        deleteUnused = new FR2_DeleteButton()
-                        {
-                            warningMessage = "It's absolutely safe to delete them all!\nA backup (.unitypackage) will be created so you can import it back later!",
-                            deleteLabel = new GUIContent("DELETE ASSETS", FR2_Icon.Delete.image),
-                            confirmMessage = "Create backup at Library/FR2/"
-                        };
+                        warningMessage = "A backup (.unitypackage) will be created so you can reimport the deleted assets later!",
+                        deleteLabel = FR2_GUIContent.From("DELETE ASSETS", FR2_Icon.Delete.image),
+                        confirmMessage = "Create backup at Library/FR2/"
+                    };
+                    
+                    GUILayout.BeginHorizontal();
+                    {
+                        deleteUnused.Draw(() => { FR2_Unity.BackupAndDeleteAssets(RefUnUse.source); });
                     }
-
-                    GUILayout.BeginArea(toolRect);
-                    deleteUnused.Draw(() => { FR2_Unity.BackupAndDeleteAssets(RefUnUse.source); });
-                    GUILayout.EndArea();
+                    GUILayout.EndHorizontal();
+                    
+                    // Rect toolRect = GUILayoutUtility.GetRect(0, Screen.width, 40, 40f);
+                    // toolRect.yMin = toolRect.yMax;
+                    //
+                    // Rect lineRect = toolRect;
+                    // lineRect.height = 1f;
+                    //
+                    // GUI2.Rect(lineRect, Color.black, 0.5f);
+                    //
+                    //
+                    // GUILayout.BeginArea(toolRect);
+                    // deleteUnused.Draw(() => { FR2_Unity.BackupAndDeleteAssets(RefUnUse.source); });
+                    // GUILayout.EndArea();
                 }
                 return;
             }
 
-            if (IsFocusingUsedInBuild)
+            if (isFocusingUsedInBuild)
             {
-                UsedInBuild.Draw(rect);
+                UsedInBuild.DrawLayout();
                 return;
             }
-
-            if (IsFocusingGUIDs)
+            
+            if (isFocusingGUIDs)
             {
-                rect = GUI2.Padding(rect, 2f, 2f);
-
-                GUILayout.BeginArea(rect);
                 DrawGUIDs();
-                GUILayout.EndArea();
-                return;
             }
         }
 
-        void DrawSettings()
+        private void DrawSettings()
         {
             if (bottomTabs.current == -1) return;
 
@@ -765,34 +1063,28 @@ namespace vietlabs.fr2
                 GUILayout.Space(2f);
                 switch (bottomTabs.current)
                 {
-                    case 0:
-                        {
-                            FR2_Setting.s.DrawSettings();
-                            break;
-                        }
+                case 0:
+                    {
+                        FR2_Setting.s.DrawSettings();
+                        break;
+                    }
 
-                    case 1:
-                        {
-                            if (AssetType.DrawIgnoreFolder())
-                            {
-                                markDirty();
-                            }
-                            break;
-                        }
+                case 1:
+                    {
+                        if (AssetType.DrawIgnoreFolder()) markDirty();
+                        break;
+                    }
 
-                    case 2:
-                        {
-                            if (AssetType.DrawSearchFilter())
-                            {
-                                markDirty();
-                            }
-                            break;
-                        }
+                case 2:
+                    {
+                        if (AssetType.DrawSearchFilter()) markDirty();
+                        break;
+                    }
                 }
             }
             GUILayout.EndVertical();
 
-            var rect = GUILayoutUtility.GetLastRect();
+            Rect rect = GUILayoutUtility.GetLastRect();
             rect.height = 1f;
             GUI2.Rect(rect, Color.black, 0.4f);
         }
@@ -815,46 +1107,39 @@ namespace vietlabs.fr2
         protected void RefreshSort()
         {
             UsedByDrawer.RefreshSort();
-            UsesDrawer.RefreshSort();
+            UsesDrawer.RefreshSort();  
+            AddressableDrawer.RefreshSort();
+                
             Duplicated.RefreshSort();
             SceneToAssetDrawer.RefreshSort();
             RefUnUse.RefreshSort();
-
             UsedInBuild.RefreshSort();
         }
+
         // public bool isExcludeByFilter;
 
-        protected bool checkNoticeFilter()
-        {
-            var rsl = false;
-
-            if (IsFocusingUsedBy && !rsl)
-            {
-                rsl = UsedByDrawer.isExclueAnyItem();
-            }
-
-            if (IsFocusingDuplicate)
-            {
-                return Duplicated.isExclueAnyItem();
-            }
-
-            if (IsFocusingUses && rsl == false)
-            {
-                rsl = UsesDrawer.isExclueAnyItem();
-            }
-
-            //tab use by
-            return rsl;
-        }
-
-        protected bool checkNoticeIgnore()
-        {
-            bool rsl = isNoticeIgnore;
-            return rsl;
-        }
+        // protected bool checkNoticeFilter()
+        // {
+        //     var rsl = false;
+        //
+        //     if (IsFocusingUsedBy && !rsl) rsl = UsedByDrawer.isExclueAnyItem();
+        //
+        //     if (IsFocusingDuplicate) return Duplicated.isExclueAnyItem();
+        //
+        //     if (IsFocusingUses && (rsl == false)) rsl = UsesDrawer.isExclueAnyItem();
+        //
+        //     //tab use by
+        //     return rsl;
+        // }
+        //
+        // protected bool checkNoticeIgnore()
+        // {
+        //     bool rsl = isNoticeIgnore;
+        //     return rsl;
+        // }
 
 
-        private Dictionary<string, Object> objs;
+        private Dictionary<string, UnityObject> guidObjs;
         private string[] ids;
 
         private void DrawGUIDs()
@@ -863,55 +1148,77 @@ namespace vietlabs.fr2
             GUILayout.BeginHorizontal();
             {
                 string guid = EditorGUILayout.TextField(tempGUID ?? string.Empty);
-                EditorGUILayout.ObjectField(tempObject, typeof(Object), false, GUILayout.Width(120f));
+                string fileId = EditorGUILayout.TextField(tempFileID ?? string.Empty);
+                EditorGUILayout.ObjectField(tempObject, typeof(UnityObject), false, GUI2.GLW_160);
 
-                if (GUILayout.Button("Paste", EditorStyles.miniButton, GUILayout.Width(70f)))
+                if (GUILayout.Button("Paste", EditorStyles.miniButton, GUI2.GLW_70))
                 {
-                    guid = EditorGUIUtility.systemCopyBuffer;
+                    string[] split = EditorGUIUtility.systemCopyBuffer.Split('/');
+                    guid = split[0];
+                    fileId = split.Length == 2 ? split[1] : string.Empty;
                 }
 
-                if (guid != tempGUID && !string.IsNullOrEmpty(guid))
+                if ((guid != tempGUID || fileId != tempFileID) && !string.IsNullOrEmpty(guid))
                 {
                     tempGUID = guid;
+                    tempFileID = fileId;
+                    string fullId = string.IsNullOrEmpty(fileId) ? tempGUID : tempGUID + "/" + tempFileID;
 
-                    tempObject = FR2_Unity.LoadAssetAtPath<Object>
+                    tempObject = FR2_Unity.LoadAssetAtPath<UnityObject>
                     (
-                        AssetDatabase.GUIDToAssetPath(tempGUID)
+                        AssetDatabase.GUIDToAssetPath(fullId)
                     );
+                }
+
+                if (GUILayout.Button("Set FileID"))
+                {
+                    var newDict = new Dictionary<string, UnityObject>();
+                    foreach (KeyValuePair<string, UnityObject> kvp in guidObjs)
+                    {
+                        string key = kvp.Key.Split('/')[0];
+                        if (!string.IsNullOrEmpty(fileId)) key = key + "/" + fileId;
+
+                        var value = FR2_Unity.LoadAssetAtPath<UnityObject>
+                        (
+                            AssetDatabase.GUIDToAssetPath(key)
+                        );
+                        newDict.Add(key, value);
+                    }
+
+                    guidObjs = newDict;
                 }
             }
             GUILayout.EndHorizontal();
             GUILayout.Space(10f);
-            if (objs == null)// || ids == null)
-            {
+            if (guidObjs == null) // || ids == null)
                 return;
-            }
 
             //GUILayout.Label("Selection", EditorStyles.boldLabel);
-            //if (ids.Length == objs.Count)
+            //if (ids.Length == guidObjs.Count)
             {
                 scrollPos = GUILayout.BeginScrollView(scrollPos);
                 {
-
-
                     //for (var i = 0; i < ids.Length; i++)
-                    foreach (var item in objs)
+                    foreach (KeyValuePair<string, UnityObject> item in guidObjs)
                     {
-                        //if (!objs.ContainsKey(ids[i])) continue;
+                        //if (!guidObjs.ContainsKey(ids[i])) continue;
 
                         GUILayout.BeginHorizontal();
                         {
-                            //var obj = objs[ids[i]];
-                            var obj = item.Value;
+                            //var obj = guidObjs[ids[i]];
+                            UnityObject obj = item.Value;
 
-                            EditorGUILayout.ObjectField(obj, typeof(Object), false, GUILayout.Width(150));
+                            EditorGUILayout.ObjectField(obj, typeof(UnityObject), false, GUI2.GLW_150);
                             string idi = item.Key;
-                            GUILayout.TextField(idi, GUILayout.Width(240f));
-                            if (GUILayout.Button("Copy", EditorStyles.miniButton, GUILayout.Width(50f)))
+                            GUILayout.TextField(idi, GUI2.GLW_320);
+                            if (GUILayout.Button(FR2_GUIContent.FromString("Copy"), EditorStyles.miniButton, GUI2.GLW_50))
                             {
                                 tempObject = obj;
+
                                 //EditorGUIUtility.systemCopyBuffer = tempGUID = item.Key;
-                                tempGUID = item.Key;
+                                string[] arr = item.Key.Split('/');
+                                tempGUID = arr[0];
+                                tempFileID = arr[1];
 
                                 //string guid = "";
                                 //long file = -1;
@@ -936,10 +1243,11 @@ namespace vietlabs.fr2
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Merge Selection To"))
             {
-                FR2_Export.MergeDuplicate(tempGUID);
+                string fullId = string.IsNullOrEmpty(tempFileID) ? tempGUID : tempGUID + "/" + tempFileID;
+                FR2_Export.MergeDuplicate(fullId);
             }
 
-            EditorGUILayout.ObjectField(tempObject, typeof(Object), false, GUILayout.Width(120f));
+            EditorGUILayout.ObjectField(tempObject, typeof(UnityObject), false, GUI2.GLW_120);
             GUILayout.EndHorizontal();
             GUILayout.FlexibleSpace();
         }
