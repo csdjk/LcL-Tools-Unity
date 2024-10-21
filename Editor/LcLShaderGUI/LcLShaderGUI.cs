@@ -11,89 +11,8 @@ namespace LcLShaderEditor
 {
     public class LcLShaderGUI : ShaderGUI
     {
-        public enum FoldoutPosition
-        {
-            Start,
-            Middle,
-            End,
-            None
-        }
-        class FoldoutNode
-        {
-            public FoldoutNode parent;
-            // List<FoldoutNode> children = new List<FoldoutNode>();
-            public string foldoutName;
-            public bool foldoutState;
-            public bool IsFoldoutHeader => pos == FoldoutPosition.Start;
-            public MaterialProperty property;
-            public FoldoutPosition pos = FoldoutPosition.None;
-            public int indentLevel;
-
-            public FoldoutNode(MaterialProperty property, FoldoutPosition pos)
-            {
-                this.property = property;
-                this.pos = pos;
-                // children = new List<FoldoutNode>();
-            }
-            public void SyncState(FoldoutNode node)
-            {
-                SetFoldoutState(node.foldoutState);
-                foldoutName = node.foldoutName;
-            }
-
-            public void SetFoldoutState(bool value)
-            {
-                foldoutState = value;
-            }
-            public void SetFoldoutName(string name)
-            {
-                foldoutName = name;
-                foldoutState = name.Equals(string.Empty) ? true : IsDisplayProp(name);
-            }
-
-            public bool GetTopState()
-            {
-                if (parent == null)
-                {
-                    return foldoutState;
-                }
-                else
-                {
-                    if (parent.foldoutState == false)
-                    {
-                        return false;
-                    }
-                    return parent.GetTopState();
-                }
-            }
-
-            public bool IsDisplay()
-            {
-                if (IsFoldoutHeader)
-                {
-                    if (parent == null)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        return GetTopState();
-                    }
-                }
-                else
-                {
-                    if (parent == null)
-                    {
-                        return foldoutState;
-                    }
-                    else
-                    {
-                        return parent.IsDisplay() && foldoutState;
-                    }
-                }
-
-            }
-        }
+        private const string k_FoldoutClassName = "Foldout";
+        private const string k_FoldoutEndClassName = "FoldoutEnd";
 
         static Material m_CopiedProperties;
         static SerializedObject m_SerializedObject;
@@ -115,10 +34,9 @@ namespace LcLShaderEditor
             }
         }
 
-
-        static bool IsDisplayProp(string propName)
+        public static bool IsDisplayProp(string propName)
         {
-            var foldoutValue = m_SerializedObject.GetHiddenPropertyFloat(propName);
+            var foldoutValue = m_SerializedObject.GetProperty(propName).GetPropertyIntValue();
             return foldoutValue > 0;
         }
 
@@ -136,6 +54,7 @@ namespace LcLShaderEditor
 
             m_SerializedObject.Dispose();
         }
+
         public static void InitNodeList(MaterialProperty[] properties, Material material)
         {
             Shader shader = material.shader;
@@ -148,15 +67,12 @@ namespace LcLShaderEditor
                 foreach (var attr in attributes)
                 {
                     GetAttr(attr, out var className, out var args);
-                    if (className == "Foldout")
-                    {
+                    if (className.Equals(k_FoldoutClassName))
                         pos = FoldoutPosition.Start;
-                    }
-                    else if (className == "FoldoutEnd")
-                    {
+                    else if (className.Equals(k_FoldoutEndClassName))
                         pos = FoldoutPosition.End;
-                    }
                 }
+
                 var node = new FoldoutNode(prop, pos)
                 {
                     indentLevel = m_FoldoutStack.Count
@@ -170,9 +86,14 @@ namespace LcLShaderEditor
                 }
                 else if (pos == FoldoutPosition.End)
                 {
-                    var parent = m_FoldoutStack.Pop();
-                    node.SyncState(parent);
-                    node.parent = parent;
+                    if (m_FoldoutStack.Count > 0)
+                    {
+                        var parent = m_FoldoutStack.Pop();
+                        node.SyncState(parent);
+                        node.parent = parent;
+                    }
+                    else
+                        Debug.LogWarning("FoldoutEnd found without matching FoldoutStart");
                 }
                 else
                 {
@@ -192,9 +113,28 @@ namespace LcLShaderEditor
         }
 
         private static int m_ControlHash = "EditorTextField".GetHashCode();
+        int m_FoldoutMatchCount = 0;
 
         public void DrawPropertiesDefaultGUI(MaterialEditor materialEditor)
         {
+            //检测foldout的Start和End的个数是否匹配
+            if (m_FoldoutMatchCount != 0)
+            {
+                var flag = "End";
+                if (m_FoldoutMatchCount < 0)
+                {
+                    for (int i = 0; i < -m_FoldoutMatchCount; i++)
+                    {
+                        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                    }
+
+                    flag = "Start";
+                }
+
+                //绘制提示信息
+                EditorGUILayout.HelpBox($"Foldout的Start和End个数不匹配,缺少了{Mathf.Abs(m_FoldoutMatchCount)}个{flag},已自动补充,GUI面板层级有可能不符合预期,请检查Properties!", MessageType.Error);
+            }
+
 
             var f = materialEditor.GetType().GetField("m_InfoMessage", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
             if (f != null)
@@ -210,16 +150,19 @@ namespace LcLShaderEditor
                     GUIUtility.GetControlID(m_ControlHash, FocusType.Passive, new Rect(0f, 0f, 0f, 0f));
                 }
             }
+
+            m_FoldoutMatchCount = 0;
             foreach (var node in m_FoldoutNodeList)
             {
-                if (node.pos == FoldoutPosition.Start)
+                if (node.IsFoldoutHeader)
                 {
+                    m_FoldoutMatchCount++;
                     EditorGUILayout.BeginVertical(EditorStyles.helpBox);
                 }
+
                 var display = node.IsDisplay();
                 if (display)
                 {
-
                     EditorGUI.indentLevel += node.indentLevel;
                     if ((node.property.flags & (MaterialProperty.PropFlags.HideInInspector | MaterialProperty.PropFlags.PerRendererData)) == MaterialProperty.PropFlags.None)
                     {
@@ -227,9 +170,20 @@ namespace LcLShaderEditor
                         Rect controlRect = EditorGUILayout.GetControlRect(true, propertyHeight, EditorStyles.layerMaskField);
                         materialEditor.ShaderProperty(controlRect, node.property, node.property.displayName);
                     }
+
                     EditorGUI.indentLevel -= node.indentLevel;
                 }
-                if (node.pos == FoldoutPosition.End)
+
+                if (node.IsFoldoutEnd)
+                {
+                    m_FoldoutMatchCount--;
+                    EditorGUILayout.EndVertical();
+                }
+            }
+
+            if (m_FoldoutMatchCount > 0)
+            {
+                for (int i = 0; i < m_FoldoutMatchCount; i++)
                 {
                     EditorGUILayout.EndVertical();
                 }
@@ -241,6 +195,7 @@ namespace LcLShaderEditor
             {
                 materialEditor.RenderQueueField();
             }
+
             materialEditor.EnableInstancingField();
             materialEditor.DoubleSidedGIField();
         }
@@ -257,7 +212,6 @@ namespace LcLShaderEditor
                 menu.AddItem(new GUIContent("Reset"), false, () => Reset(material));
                 menu.ShowAsContext();
             }
-
         }
 
 
@@ -290,6 +244,76 @@ namespace LcLShaderEditor
             // Reset ShaderKeywords
             material.shaderKeywords = new string[0];
         }
+    }
 
+    public enum FoldoutPosition
+    {
+        Start,
+        Middle,
+        End,
+        None
+    }
+
+    class FoldoutNode
+    {
+        public FoldoutNode parent;
+        public string foldoutName;
+        public bool foldoutState;
+        public bool IsFoldoutHeader => pos == FoldoutPosition.Start;
+        public bool IsFoldoutEnd => pos == FoldoutPosition.End;
+        public MaterialProperty property;
+        public FoldoutPosition pos = FoldoutPosition.None;
+        public int indentLevel;
+
+        public FoldoutNode(MaterialProperty property, FoldoutPosition pos)
+        {
+            this.property = property;
+            this.pos = pos;
+        }
+
+        public void SyncState(FoldoutNode node)
+        {
+            SetFoldoutState(node.foldoutState);
+            foldoutName = node.foldoutName;
+        }
+
+        public void SetFoldoutState(bool value)
+        {
+            foldoutState = value;
+        }
+
+        public void SetFoldoutName(string name)
+        {
+            foldoutName = name;
+            foldoutState = name.Equals(string.Empty) || LcLShaderGUI.IsDisplayProp(name);
+        }
+
+        public bool GetTopState()
+        {
+            if (parent == null) return foldoutState;
+            else
+            {
+                if (parent.foldoutState == false) return false;
+                return parent.GetTopState();
+            }
+        }
+
+        public bool IsDisplay()
+        {
+            if (IsFoldoutHeader)
+            {
+                if (parent == null)
+                    return true;
+                else
+                    return GetTopState();
+            }
+            else
+            {
+                if (parent == null)
+                    return foldoutState;
+                else
+                    return parent.IsDisplay() && foldoutState;
+            }
+        }
     }
 }

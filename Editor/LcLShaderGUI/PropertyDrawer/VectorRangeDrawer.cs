@@ -10,11 +10,13 @@ namespace LcLShaderEditor
 
         private Vector4 m_Min;
         private Vector4 m_Max;
+
         public VectorRangeDrawer(float min, float max)
         {
             this.m_Min.Set(min, min, min, min);
             this.m_Max.Set(max, max, max, max);
         }
+
         public VectorRangeDrawer(float min0, float max0, float min1, float max1, float min2, float max2, float min3, float max3)
         {
             this.m_Min.Set(min0, min1, min2, min3);
@@ -32,11 +34,16 @@ namespace LcLShaderEditor
                 EditorGUI.BeginChangeCheck();
                 Vector4 vec = prop.vectorValue;
                 EditorGUILayout.LabelField(label);
-                vec.x = EditorGUILayout.Slider("x", vec.x, m_Min.x, m_Max.x);
-                vec.y = EditorGUILayout.Slider("y", vec.y, m_Min.y, m_Max.y);
-                vec.z = EditorGUILayout.Slider("z", vec.z, m_Min.z, m_Max.z);
-                vec.w = EditorGUILayout.Slider("w", vec.w, m_Min.w, m_Max.w);
+                {
+                    EditorGUI.indentLevel++;
 
+                    vec.x = EditorGUILayout.Slider("x", vec.x, m_Min.x, m_Max.x);
+                    vec.y = EditorGUILayout.Slider("y", vec.y, m_Min.y, m_Max.y);
+                    vec.z = EditorGUILayout.Slider("z", vec.z, m_Min.z, m_Max.z);
+                    vec.w = EditorGUILayout.Slider("w", vec.w, m_Min.w, m_Max.w);
+
+                    EditorGUI.indentLevel--;
+                }
                 if (EditorGUI.EndChangeCheck())
                 {
                     prop.vectorValue = vec;
@@ -46,8 +53,8 @@ namespace LcLShaderEditor
             {
                 editor.DefaultShaderProperty(prop, label.text);
             }
-
         }
+
         public override float GetPropertyHeight(MaterialProperty prop, string label, MaterialEditor editor)
         {
             return m_Height;

@@ -42,13 +42,14 @@ namespace LcLShaderEditor
                 m_FoldoutValueName = ShaderEditorHandler.GetFoldoutPropName(prop.name);
             }
             var serializedObject = new SerializedObject(m_Mat);
-            var foldoutState = serializedObject.GetHiddenPropertyFloat(m_FoldoutValueName);
+            var foldoutProperty = serializedObject.GetProperty(m_FoldoutValueName);
+            var foldoutState = foldoutProperty.GetPropertyIntValue();
 
             var foldout = foldoutState > 0;
             var toggleValue = prop.floatValue > 0;
             foldout = ShaderEditorHandler.Foldout(position, foldout, label.text, IsKeyword, ref toggleValue);
             prop.floatValue = Convert.ToSingle(toggleValue);
-            serializedObject.SetHiddenPropertyFloat(m_FoldoutValueName, Convert.ToInt16(foldout));
+            foldoutProperty.SetPropertyIntValue(m_FoldoutValueName, Convert.ToInt16(foldout));
             if (IsKeyword)
             {
                 SetKeyword(m_Mat, toggleValue);

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using UnityEditor;
+using UnityEditor.Rendering;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -136,19 +137,10 @@ namespace LcLShaderEditor
             return propName + foldoutFlag;
         }
 
-        // public static
-
-        static Stopwatch stopwatch = new Stopwatch();
-
-        /// <summary>
-        /// 获取材质的Float属性
-        /// </summary>
-        /// <param name="serializedObject">new SerializedObject(mat)</param>
-        /// <param name="name"></param>
-        /// <returns></returns>
-        public static float GetHiddenPropertyFloat(this SerializedObject serializedObject, string name)
+        public static SerializedProperty GetProperty(this SerializedObject serializedObject, string name)
         {
             var serializedProperty = serializedObject.FindProperty("m_SavedProperties.m_Ints");
+            // serializedProperty.Find()
             SerializedProperty element = null;
             foreach (SerializedProperty p in serializedProperty)
             {
@@ -168,38 +160,35 @@ namespace LcLShaderEditor
                 serializedObject.ApplyModifiedProperties();
             }
 
-            return element.FindPropertyRelative("second").intValue;
+            return element;
         }
 
-        public static void SetHiddenPropertyFloat(this SerializedObject serializedObject, string name, int value)
+        /// <summary>
+        /// 获取SerializedProperty的Int属性
+        /// </summary>
+        /// <returns></returns>
+        public static int GetPropertyIntValue(this SerializedProperty property)
         {
-            var serializedProperty = serializedObject.FindProperty("m_SavedProperties.m_Ints");
+            return property.FindPropertyRelative("second").intValue;
+        }
 
-            SerializedProperty element = null;
-            for (int i = 0; i < serializedProperty.arraySize; i++)
-            {
-                SerializedProperty p = serializedProperty.GetArrayElementAtIndex(i);
-                if (p.FindPropertyRelative("first").stringValue == name)
-                {
-                    element = p;
-                    break;
-                }
-            }
-
-            if (element == null)
-            {
-                serializedProperty.InsertArrayElementAtIndex(1);
-                element = serializedProperty.GetArrayElementAtIndex(1);
-                element.FindPropertyRelative("first").stringValue = name;
-                element.FindPropertyRelative("second").intValue = value;
-                serializedProperty.serializedObject.ApplyModifiedProperties();
-                AssetDatabase.SaveAssets();
-            }
-            else
-            {
-                element.FindPropertyRelative("second").intValue = value;
-                serializedProperty.serializedObject.ApplyModifiedProperties();
-            }
+        public static void SetPropertyIntValue(this SerializedProperty property, string name, int value)
+        {
+            // if (property == null)
+            // {
+            //     serializedProperty.InsertArrayElementAtIndex(1);
+            //     element = serializedProperty.GetArrayElementAtIndex(1);
+            //     element.FindPropertyRelative("first").stringValue = name;
+            //     element.FindPropertyRelative("second").intValue = value;
+            //     serializedProperty.serializedObject.ApplyModifiedProperties();
+            //     AssetDatabase.SaveAssets();
+            // }
+            // else
+            // {
+            property.FindPropertyRelative("second").intValue = value;
+            property.serializedObject.ApplyModifiedProperties();
+            // serializedProperty.serializedObject.ApplyModifiedProperties();
+            // }
         }
     }
 }
