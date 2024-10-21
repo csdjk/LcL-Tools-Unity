@@ -118,7 +118,7 @@ namespace LcLShaderEditor
 
         static bool IsDisplayProp(string propName)
         {
-            float foldoutValue = m_SerializedObject.GetHiddenPropertyFloat(propName);
+            var foldoutValue = m_SerializedObject.GetHiddenPropertyFloat(propName);
             return foldoutValue > 0;
         }
 

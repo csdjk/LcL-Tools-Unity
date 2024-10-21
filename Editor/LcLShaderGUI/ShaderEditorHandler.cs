@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
+
 namespace LcLShaderEditor
 {
     public static class ShaderEditorHandler
@@ -11,6 +15,7 @@ namespace LcLShaderEditor
         private static MethodInfo m_GetShaderPropertyDrawer_Method = m_MaterialPropertyHandler_Type.GetMethod("GetShaderPropertyDrawer", BindingFlags.Static | BindingFlags.NonPublic);
 
         delegate MaterialPropertyDrawer GetShaderPropertyDrawerType(string attrib, out bool isDecorator);
+
         static GetShaderPropertyDrawerType m_GetShaderPropertyDrawerType;
 
         public static MaterialPropertyDrawer GetShaderPropertyDrawer(string attrib, out bool isDecorator)
@@ -27,10 +32,10 @@ namespace LcLShaderEditor
         }
 
 
-
         // -------------------------------Foldout GUI-----------------------------------------
 
         static GUIStyle m_GuiStyleFoldout;
+
         static GUIStyle GuiStyleFoldout
         {
             get
@@ -45,15 +50,17 @@ namespace LcLShaderEditor
                         font = EditorStyles.boldLabel.font,
                         fontSize = EditorStyles.boldLabel.fontSize
 #if UNITY_2019_4_OR_NEWER
-                            + 1,
+                                   + 1,
 #endif
                     };
-
                 }
+
                 return m_GuiStyleFoldout;
             }
         }
+
         static GUIStyle m_ToggleStyle;
+
         static GUIStyle ToggleStyle
         {
             get
@@ -62,7 +69,9 @@ namespace LcLShaderEditor
                 return m_ToggleStyle;
             }
         }
+
         static GUIStyle m_ToggleMixedStyle;
+
         static GUIStyle ToggleMixedStyle
         {
             get
@@ -71,6 +80,7 @@ namespace LcLShaderEditor
                 return m_ToggleMixedStyle;
             }
         }
+
         public static bool Foldout(Rect rect, bool isFolding, string title, bool hasToggle, ref bool toggleValue)
         {
             var toggleRect = new Rect(rect.x + 8f, rect.y + 5f, 13f, 13f);
@@ -100,6 +110,7 @@ namespace LcLShaderEditor
                 {
                     isFolding = !isFolding;
                 }
+
                 GUI.backgroundColor = guiColor;
                 GUI.enabled = enabled;
             }
@@ -108,7 +119,7 @@ namespace LcLShaderEditor
             if (hasToggle)
             {
                 GUI.Toggle(toggleRect, EditorGUI.showMixedValue ? false : toggleValue, String.Empty,
-                           EditorGUI.showMixedValue ? ToggleMixedStyle : ToggleStyle);
+                    EditorGUI.showMixedValue ? ToggleMixedStyle : ToggleStyle);
             }
 
             return isFolding;
@@ -119,10 +130,16 @@ namespace LcLShaderEditor
 
         // public static string foldoutFlag = "_FoldoutValue";
         public static string foldoutFlag = "_FoldoutState";
+
         public static string GetFoldoutPropName(string propName)
         {
             return propName + foldoutFlag;
         }
+
+        // public static
+
+        static Stopwatch stopwatch = new Stopwatch();
+
         /// <summary>
         /// 获取材质的Float属性
         /// </summary>
@@ -131,12 +148,10 @@ namespace LcLShaderEditor
         /// <returns></returns>
         public static float GetHiddenPropertyFloat(this SerializedObject serializedObject, string name)
         {
-            var serializedProperty = serializedObject.FindProperty("m_SavedProperties.m_Floats");
-
+            var serializedProperty = serializedObject.FindProperty("m_SavedProperties.m_Ints");
             SerializedProperty element = null;
-            for (int i = 0; i < serializedProperty.arraySize; i++)
+            foreach (SerializedProperty p in serializedProperty)
             {
-                SerializedProperty p = serializedProperty.GetArrayElementAtIndex(i);
                 if (p.FindPropertyRelative("first").stringValue == name)
                 {
                     element = p;
@@ -149,17 +164,16 @@ namespace LcLShaderEditor
                 serializedProperty.InsertArrayElementAtIndex(1);
                 element = serializedProperty.GetArrayElementAtIndex(1);
                 element.FindPropertyRelative("first").stringValue = name;
-                element.FindPropertyRelative("second").floatValue = 1.0f;
+                element.FindPropertyRelative("second").intValue = 1;
                 serializedObject.ApplyModifiedProperties();
-                // AssetDatabase.SaveAssets();
             }
 
-            return element.FindPropertyRelative("second").floatValue;
+            return element.FindPropertyRelative("second").intValue;
         }
 
-        public static void SetHiddenPropertyFloat(this SerializedObject serializedObject, string name, float value)
+        public static void SetHiddenPropertyFloat(this SerializedObject serializedObject, string name, int value)
         {
-            var serializedProperty = serializedObject.FindProperty("m_SavedProperties.m_Floats");
+            var serializedProperty = serializedObject.FindProperty("m_SavedProperties.m_Ints");
 
             SerializedProperty element = null;
             for (int i = 0; i < serializedProperty.arraySize; i++)
@@ -177,13 +191,13 @@ namespace LcLShaderEditor
                 serializedProperty.InsertArrayElementAtIndex(1);
                 element = serializedProperty.GetArrayElementAtIndex(1);
                 element.FindPropertyRelative("first").stringValue = name;
-                element.FindPropertyRelative("second").floatValue = value;
+                element.FindPropertyRelative("second").intValue = value;
                 serializedProperty.serializedObject.ApplyModifiedProperties();
                 AssetDatabase.SaveAssets();
             }
             else
             {
-                element.FindPropertyRelative("second").floatValue = value;
+                element.FindPropertyRelative("second").intValue = value;
                 serializedProperty.serializedObject.ApplyModifiedProperties();
             }
         }
