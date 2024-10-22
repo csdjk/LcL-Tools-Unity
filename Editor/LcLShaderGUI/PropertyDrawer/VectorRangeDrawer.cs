@@ -30,24 +30,30 @@ namespace LcLShaderEditor
             {
                 EditorGUIUtility.labelWidth = 0f;
                 EditorGUIUtility.fieldWidth = 0f;
+                Vector4 vec = prop.vectorValue;
 
                 EditorGUI.BeginChangeCheck();
-                Vector4 vec = prop.vectorValue;
-                EditorGUILayout.LabelField(label);
                 {
-                    EditorGUI.indentLevel++;
+                    EditorGUI.showMixedValue = prop.hasMixedValue;
+                    var oldLabelWidth = EditorGUIUtility.labelWidth;
+                    EditorGUIUtility.labelWidth = 0f;
 
-                    vec.x = EditorGUILayout.Slider("x", vec.x, m_Min.x, m_Max.x);
-                    vec.y = EditorGUILayout.Slider("y", vec.y, m_Min.y, m_Max.y);
-                    vec.z = EditorGUILayout.Slider("z", vec.z, m_Min.z, m_Max.z);
-                    vec.w = EditorGUILayout.Slider("w", vec.w, m_Min.w, m_Max.w);
+                    EditorGUI.LabelField(position, label);
+                    {
+                        EditorGUILayout.BeginVertical();
+                        EditorGUI.indentLevel++;
+                        vec.x = EditorGUILayout.Slider("x", vec.x, m_Min.x, m_Max.x);
+                        vec.y = EditorGUILayout.Slider("y", vec.y, m_Min.y, m_Max.y);
+                        vec.z = EditorGUILayout.Slider("z", vec.z, m_Min.z, m_Max.z);
+                        vec.w = EditorGUILayout.Slider("w", vec.w, m_Min.w, m_Max.w);
+                        EditorGUI.indentLevel--;
+                        EditorGUILayout.EndHorizontal();
+                    }
 
-                    EditorGUI.indentLevel--;
+                    EditorGUIUtility.labelWidth = oldLabelWidth;
+                    EditorGUI.showMixedValue = false;
                 }
-                if (EditorGUI.EndChangeCheck())
-                {
-                    prop.vectorValue = vec;
-                }
+                if (EditorGUI.EndChangeCheck()) prop.vectorValue = vec;
             }
             else
             {
@@ -55,9 +61,9 @@ namespace LcLShaderEditor
             }
         }
 
-        public override float GetPropertyHeight(MaterialProperty prop, string label, MaterialEditor editor)
-        {
-            return m_Height;
-        }
+        // public override float GetPropertyHeight(MaterialProperty prop, string label, MaterialEditor editor)
+        // {
+        //     return 50;
+        // }
     }
 }

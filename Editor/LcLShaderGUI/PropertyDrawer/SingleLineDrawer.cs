@@ -16,11 +16,11 @@ namespace LcLShaderEditor
     class SingleLineDrawer : MaterialPropertyDrawer
     {
         float m_Height;
-
         public override void OnGUI(Rect position, MaterialProperty prop, GUIContent label, MaterialEditor editor)
         {
             m_Height = position.height;
             editor.TexturePropertySingleLine(label, prop);
+            // editor.TextureProperty(position, prop, label);
         }
         public override float GetPropertyHeight(MaterialProperty prop, string label, MaterialEditor editor)
         {

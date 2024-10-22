@@ -82,16 +82,18 @@ namespace LcLShaderEditor
             }
         }
 
-        public static bool Foldout(Rect rect, bool isFolding, string title, bool hasToggle, ref bool toggleValue)
+        public static void Foldout( Rect rect, bool isFolding, string title, bool hasToggle, bool toggleValue, Action<bool> foldoutAction, Action<bool> toggleAction)
         {
-            var toggleRect = new Rect(rect.x + 8f, rect.y + 5f, 13f, 13f);
-            rect = GUILayoutUtility.GetRect(16f, 25f);
+            var toggleRect = new Rect(rect.x + 8f, rect.y + 3f, 13f, 13f);
+            // rect = GUILayoutUtility.GetRect(16f, 25f);
             // Toggle Event
             if (hasToggle)
             {
-                if (Event.current.type == EventType.MouseDown && Event.current.button == 0 && toggleRect.Contains(Event.current.mousePosition))
+                if (Event.current.type == EventType.MouseDown
+                    && Event.current.button == 0
+                    && toggleRect.Contains(Event.current.mousePosition))
                 {
-                    toggleValue = !toggleValue;
+                    toggleAction(!toggleValue);
                     Event.current.Use();
                     GUI.changed = true;
                 }
@@ -109,7 +111,7 @@ namespace LcLShaderEditor
                 GUI.backgroundColor = isFolding ? Color.white : new Color(0.85f, 0.85f, 0.85f);
                 if (GUI.Button(rect, title, GuiStyleFoldout))
                 {
-                    isFolding = !isFolding;
+                    foldoutAction(!isFolding);
                 }
 
                 GUI.backgroundColor = guiColor;
@@ -119,28 +121,53 @@ namespace LcLShaderEditor
             // Toggle Icon
             if (hasToggle)
             {
-                GUI.Toggle(toggleRect, EditorGUI.showMixedValue ? false : toggleValue, String.Empty,
+                GUI.Toggle(toggleRect, !EditorGUI.showMixedValue && toggleValue, String.Empty,
                     EditorGUI.showMixedValue ? ToggleMixedStyle : ToggleStyle);
             }
-
-            return isFolding;
         }
 
 
-        // ----------------------------------------------------------------------------------
+        public static readonly float revertButtonWidth = 20;
+        public static readonly float space = 5;
 
-        // public static string foldoutFlag = "_FoldoutValue";
-        public static string foldoutFlag = "_FoldoutState";
-
-        public static string GetFoldoutPropName(string propName)
+        public static Rect SplitRevertButtonRect(ref Rect rect)
         {
-            return propName + foldoutFlag;
+            Rect buttonRect = new Rect(rect.x + rect.width - revertButtonWidth, rect.y, revertButtonWidth, rect.height);
+            rect.width -= (revertButtonWidth + space);
+            return buttonRect;
         }
 
+        public static void DrawPropertyRevertButton(Rect rect, Action revertAction)
+        {
+            if (GUI.Button(rect, EditorGUIUtility.IconContent("d_Refresh"), GUIStyle.none))
+            {
+                revertAction();
+            }
+        }
+
+        // ---------------------------------Data存储-------------------------------------------------
+        public static bool GetFoldoutState(int instanceId, string propName)
+        {
+            var state = PlayerPrefs.GetInt($"{instanceId}_{propName}",1);
+            return state == 1;
+        }
+        public static bool GetFoldoutState(Material mat, string propName)
+        {
+            var instanceId = mat.GetInstanceID();
+            return GetFoldoutState(instanceId, propName);
+        }
+        public static void SetFoldoutState(Material mat, string propName, bool state)
+        {
+            var instanceId = mat.GetInstanceID();
+            PlayerPrefs.SetInt($"{instanceId}_{propName}", state ? 1 : 0);
+        }
+
+
+        // ---------------------------------Property Data-------------------------------------------------
+        //已弃用,效率太低
         public static SerializedProperty GetProperty(this SerializedObject serializedObject, string name)
         {
             var serializedProperty = serializedObject.FindProperty("m_SavedProperties.m_Ints");
-            // serializedProperty.Find()
             SerializedProperty element = null;
             foreach (SerializedProperty p in serializedProperty)
             {
@@ -153,8 +180,8 @@ namespace LcLShaderEditor
 
             if (element == null)
             {
-                serializedProperty.InsertArrayElementAtIndex(1);
-                element = serializedProperty.GetArrayElementAtIndex(1);
+                serializedProperty.InsertArrayElementAtIndex(0);
+                element = serializedProperty.GetArrayElementAtIndex(0);
                 element.FindPropertyRelative("first").stringValue = name;
                 element.FindPropertyRelative("second").intValue = 1;
                 serializedObject.ApplyModifiedProperties();
@@ -171,24 +198,10 @@ namespace LcLShaderEditor
         {
             return property.FindPropertyRelative("second").intValue;
         }
-
         public static void SetPropertyIntValue(this SerializedProperty property, string name, int value)
         {
-            // if (property == null)
-            // {
-            //     serializedProperty.InsertArrayElementAtIndex(1);
-            //     element = serializedProperty.GetArrayElementAtIndex(1);
-            //     element.FindPropertyRelative("first").stringValue = name;
-            //     element.FindPropertyRelative("second").intValue = value;
-            //     serializedProperty.serializedObject.ApplyModifiedProperties();
-            //     AssetDatabase.SaveAssets();
-            // }
-            // else
-            // {
             property.FindPropertyRelative("second").intValue = value;
             property.serializedObject.ApplyModifiedProperties();
-            // serializedProperty.serializedObject.ApplyModifiedProperties();
-            // }
         }
     }
 }

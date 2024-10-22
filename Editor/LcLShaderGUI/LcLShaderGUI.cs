@@ -14,8 +14,9 @@ namespace LcLShaderEditor
         private const string k_FoldoutClassName = "Foldout";
         private const string k_FoldoutEndClassName = "FoldoutEnd";
 
+        static int m_MaterialInstanceID;
+        static Material m_Material;
         static Material m_CopiedProperties;
-        static SerializedObject m_SerializedObject;
         static Stack<FoldoutNode> m_FoldoutStack = new Stack<FoldoutNode>();
         static List<FoldoutNode> m_FoldoutNodeList = new List<FoldoutNode>();
 
@@ -36,8 +37,7 @@ namespace LcLShaderEditor
 
         public static bool IsDisplayProp(string propName)
         {
-            var foldoutValue = m_SerializedObject.GetProperty(propName).GetPropertyIntValue();
-            return foldoutValue > 0;
+            return ShaderEditorHandler.GetFoldoutState(m_MaterialInstanceID, propName);
         }
 
 
@@ -45,14 +45,11 @@ namespace LcLShaderEditor
         {
             m_FoldoutStack.Clear();
             m_FoldoutNodeList.Clear();
-            var material = materialEditor.target as Material;
-            m_SerializedObject = new SerializedObject(material);
-
-            InitNodeList(properties, material);
+            m_Material = materialEditor.target as Material;
+            m_MaterialInstanceID = m_Material.GetInstanceID();
+            InitNodeList(properties, m_Material);
             DrawPropertiesDefaultGUI(materialEditor);
             DrawPropertiesContextMenu(materialEditor);
-
-            m_SerializedObject.Dispose();
         }
 
         public static void InitNodeList(MaterialProperty[] properties, Material material)
@@ -75,12 +72,13 @@ namespace LcLShaderEditor
 
                 var node = new FoldoutNode(prop, pos)
                 {
+                    propertyIndex = i,
                     indentLevel = m_FoldoutStack.Count
                 };
 
                 if (pos == FoldoutPosition.Start)
                 {
-                    node.SetFoldoutName(ShaderEditorHandler.GetFoldoutPropName(prop.name));
+                    node.SetFoldoutName(prop.name);
                     node.parent = m_FoldoutStack.TryPeek(out var parent) ? parent : null;
                     m_FoldoutStack.Push(node);
                 }
@@ -108,6 +106,7 @@ namespace LcLShaderEditor
                         node.SetFoldoutName("");
                     }
                 }
+
                 m_FoldoutNodeList.Add(node);
             }
         }
@@ -168,7 +167,11 @@ namespace LcLShaderEditor
                     {
                         float propertyHeight = materialEditor.GetPropertyHeight(node.property, node.property.displayName);
                         Rect controlRect = EditorGUILayout.GetControlRect(true, propertyHeight, EditorStyles.layerMaskField);
+                        var revertRect = ShaderEditorHandler.SplitRevertButtonRect(ref controlRect);
                         materialEditor.ShaderProperty(controlRect, node.property, node.property.displayName);
+                        //重置属性
+                        if (!IsPropertyDefault(node))
+                            ShaderEditorHandler.DrawPropertyRevertButton(revertRect, () => RevertProperty(node));
                     }
 
                     EditorGUI.indentLevel -= node.indentLevel;
@@ -181,6 +184,7 @@ namespace LcLShaderEditor
                 }
             }
 
+            //补充缺失的End
             if (m_FoldoutMatchCount > 0)
             {
                 for (int i = 0; i < m_FoldoutMatchCount; i++)
@@ -200,6 +204,84 @@ namespace LcLShaderEditor
             materialEditor.DoubleSidedGIField();
         }
 
+        /// <summary>
+        ///  重置属性
+        /// </summary>
+        private static void RevertProperty(FoldoutNode node)
+        {
+            var shader = m_Material.shader;
+            var property = node.property;
+            var index = node.propertyIndex;
+            var type = property.type;
+            switch (type)
+            {
+                case MaterialProperty.PropType.Float:
+                case MaterialProperty.PropType.Range:
+                    property.floatValue = shader.GetPropertyDefaultFloatValue(index);
+                    break;
+                case MaterialProperty.PropType.Color:
+                    property.colorValue = shader.GetPropertyDefaultVectorValue(index);
+                    break;
+                case MaterialProperty.PropType.Vector:
+                    property.vectorValue = shader.GetPropertyDefaultVectorValue(index);
+                    break;
+                case MaterialProperty.PropType.Texture:
+                    property.textureValue = null;
+                    break;
+            }
+
+            if (node.IsFoldoutHeader)
+            {
+                foreach (var child in m_FoldoutNodeList)
+                {
+                    if (child.parent == node)
+                    {
+                        RevertProperty(child);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 判断属性是否默认值
+        /// </summary>
+        private static bool IsPropertyDefault(FoldoutNode node)
+        {
+            if (node.IsFoldoutHeader)
+            {
+                foreach (var child in m_FoldoutNodeList)
+                {
+                    if (child.parent == node)
+                    {
+                        if (!IsPropertyDefault(child))
+                            return false;
+                    }
+                }
+            }
+
+            var shader = m_Material.shader;
+            var property = node.property;
+            var index = node.propertyIndex;
+            var type = property.type;
+            switch (type)
+            {
+                case MaterialProperty.PropType.Float:
+                case MaterialProperty.PropType.Range:
+                    return property.floatValue == shader.GetPropertyDefaultFloatValue(index);
+                case MaterialProperty.PropType.Color:
+                    var color = property.colorValue;
+                    var defaultColor = shader.GetPropertyDefaultVectorValue(index);
+                    return color.r == defaultColor.x && color.g == defaultColor.y && color.b == defaultColor.z && color.a == defaultColor.w;
+                case MaterialProperty.PropType.Vector:
+                    return property.vectorValue == shader.GetPropertyDefaultVectorValue(index);
+                case MaterialProperty.PropType.Texture:
+                    return property.textureValue == null;
+            }
+
+
+            return false;
+        }
+
         public static void DrawPropertiesContextMenu(MaterialEditor materialEditor)
         {
             if (Event.current.type == EventType.MouseDown && Event.current.button == 1)
@@ -209,7 +291,7 @@ namespace LcLShaderEditor
                 var menu = new GenericMenu();
                 menu.AddItem(new GUIContent("Copy"), false, () => Copy(material));
                 menu.AddItem(new GUIContent("Paste"), false, () => Paste(material));
-                menu.AddItem(new GUIContent("Reset"), false, () => Reset(material));
+                menu.AddItem(new GUIContent("Reset All"), false, () => Reset(material));
                 menu.ShowAsContext();
             }
         }
@@ -238,10 +320,9 @@ namespace LcLShaderEditor
         private static void Reset(Material material)
         {
             Undo.RecordObject(material, "Reset Material");
-
             // Reset the material
             Unsupported.SmartReset(material);
-            // Reset ShaderKeywords
+            // material.reset
             material.shaderKeywords = new string[0];
         }
     }
@@ -259,11 +340,12 @@ namespace LcLShaderEditor
         public FoldoutNode parent;
         public string foldoutName;
         public bool foldoutState;
-        public bool IsFoldoutHeader => pos == FoldoutPosition.Start;
-        public bool IsFoldoutEnd => pos == FoldoutPosition.End;
-        public MaterialProperty property;
-        public FoldoutPosition pos = FoldoutPosition.None;
         public int indentLevel;
+        public MaterialProperty property;
+        public int propertyIndex;
+        public FoldoutPosition pos = FoldoutPosition.None;
+        public bool IsFoldoutEnd => pos == FoldoutPosition.End;
+        public bool IsFoldoutHeader => pos == FoldoutPosition.Start;
 
         public FoldoutNode(MaterialProperty property, FoldoutPosition pos)
         {

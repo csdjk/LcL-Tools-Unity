@@ -1,8 +1,6 @@
 using UnityEngine;
 using UnityEditor;
 using System;
-using System.Diagnostics;
-using Debug = UnityEngine.Debug;
 
 namespace LcLShaderEditor
 {
@@ -12,18 +10,15 @@ namespace LcLShaderEditor
     public class FoldoutDrawer : MaterialPropertyDrawer
     {
         string m_Keyword;
-        string m_FoldoutValueName;
         Material m_Mat;
         bool IsKeyword => m_Keyword != null;
 
         public FoldoutDrawer()
         {
         }
-
         public FoldoutDrawer(string keyword)
         {
-            this.m_Keyword = keyword;
-            m_FoldoutValueName = ShaderEditorHandler.GetFoldoutPropName(keyword);
+            m_Keyword = keyword;
         }
 
         void SetKeyword(Material material, bool on)
@@ -37,30 +32,22 @@ namespace LcLShaderEditor
         public override void OnGUI(Rect position, MaterialProperty prop, GUIContent label, MaterialEditor editor)
         {
             m_Mat = prop.targets[0] as Material;
-            if (m_FoldoutValueName == null)
-            {
-                m_FoldoutValueName = ShaderEditorHandler.GetFoldoutPropName(prop.name);
-            }
-            var serializedObject = new SerializedObject(m_Mat);
-            var foldoutProperty = serializedObject.GetProperty(m_FoldoutValueName);
-            var foldoutState = foldoutProperty.GetPropertyIntValue();
-
-            var foldout = foldoutState > 0;
+            var foldoutState = ShaderEditorHandler.GetFoldoutState(m_Mat, prop.name);
             var toggleValue = prop.floatValue > 0;
-            foldout = ShaderEditorHandler.Foldout(position, foldout, label.text, IsKeyword, ref toggleValue);
-            prop.floatValue = Convert.ToSingle(toggleValue);
-            foldoutProperty.SetPropertyIntValue(m_FoldoutValueName, Convert.ToInt16(foldout));
-            if (IsKeyword)
+            ShaderEditorHandler.Foldout(position, foldoutState, label.text, IsKeyword, toggleValue, (v) =>
             {
-                SetKeyword(m_Mat, toggleValue);
-            }
-            serializedObject.Dispose();
+                ShaderEditorHandler.SetFoldoutState(m_Mat, prop.name, v);
+            }, (v) =>
+            {
+                prop.floatValue = Convert.ToSingle(v);
+                SetKeyword(m_Mat, v);
+            });
         }
-
-        public override float GetPropertyHeight(MaterialProperty prop, string label, MaterialEditor editor)
-        {
-            return 0;
-        }
+        //
+        // public override float GetPropertyHeight(MaterialProperty prop, string label, MaterialEditor editor)
+        // {
+        //     return 0;
+        // }
     }
 
     /// <summary>

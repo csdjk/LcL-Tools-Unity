@@ -41,36 +41,53 @@ namespace LcLShaderEditor
 
         override public void OnGUI(Rect pos, MaterialProperty prop, string label, MaterialEditor editor)
         {
-            var mat = prop.targets[0] as Material;
-            if (mat == null)
+            var type = prop.type;
+            if (type == MaterialProperty.PropType.Float)
             {
-                return;
+                var floatValue = Mathf.Min(m_Max.x, prop.floatValue);
+                EditorGUI.BeginChangeCheck();
+                floatValue = EditorGUI.FloatField(pos, label, floatValue);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    prop.floatValue = floatValue;
+                }
             }
-
-            if (prop.type == MaterialProperty.PropType.Float)
+            else if (type == MaterialProperty.PropType.Int)
             {
-                prop.floatValue = Mathf.Min(m_Max.x, prop.floatValue);
+                var intValue = Mathf.Min((int)m_Max.x, prop.intValue);
+                EditorGUI.BeginChangeCheck();
+                intValue = EditorGUI.IntField(pos, label, intValue);
+                if (EditorGUI.EndChangeCheck())
+                    prop.intValue = intValue;
             }
-            else if (prop.type == MaterialProperty.PropType.Int)
-            {
-                prop.intValue = Mathf.Min((int)m_Max.x, prop.intValue);
-            }
-            else if (prop.type == MaterialProperty.PropType.Vector)
+            else if (type == MaterialProperty.PropType.Vector)
             {
                 Vector4 v = prop.vectorValue;
                 if (m_Max.x != float.MaxValue) v.x = Mathf.Min(m_Max.x, v.x);
                 if (m_Max.y != float.MaxValue) v.y = Mathf.Min(m_Max.y, v.y);
                 if (m_Max.z != float.MaxValue) v.z = Mathf.Min(m_Max.z, v.z);
                 if (m_Max.w != float.MaxValue) v.w = Mathf.Min(m_Max.w, v.w);
-                prop.vectorValue = v;
+                EditorGUI.BeginChangeCheck();
+                {
+                    EditorGUI.showMixedValue = prop.hasMixedValue;
+                    var oldLabelWidth = EditorGUIUtility.labelWidth;
+                    EditorGUIUtility.labelWidth = 0f;
+
+                    v = EditorGUI.Vector4Field(pos, label, v);
+
+                    EditorGUIUtility.labelWidth = oldLabelWidth;
+                    EditorGUI.showMixedValue = false;
+                }
+                if (EditorGUI.EndChangeCheck()) prop.vectorValue = v;
             }
-
-            editor.DefaultShaderProperty(prop, label);
+            else
+            {
+                editor.DefaultShaderProperty(prop, label);
+            }
         }
-
-        override public float GetPropertyHeight(MaterialProperty prop, string label, MaterialEditor editor)
-        {
-            return 0;
-        }
+        // override public float GetPropertyHeight(MaterialProperty prop, string label, MaterialEditor editor)
+        // {
+        //     return 0;
+        // }
     }
 }

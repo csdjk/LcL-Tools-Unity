@@ -31,10 +31,10 @@ namespace LcLShaderEditor
             }
         }
 
-        override public float GetPropertyHeight(MaterialProperty prop, string label, MaterialEditor editor)
-        {
-            return 0;
-        }
+        // override public float GetPropertyHeight(MaterialProperty prop, string label, MaterialEditor editor)
+        // {
+        //     return 0;
+        // }
     }
     /// <summary>
     /// Shader Pass 开关
@@ -58,10 +58,10 @@ namespace LcLShaderEditor
             }
         }
 
-        override public float GetPropertyHeight(MaterialProperty prop, string label, MaterialEditor editor)
-        {
-            return 0;
-        }
+        // override public float GetPropertyHeight(MaterialProperty prop, string label, MaterialEditor editor)
+        // {
+        //     return 0;
+        // }
     }
 
     /// <summary>
@@ -79,7 +79,6 @@ namespace LcLShaderEditor
         {
             var material = prop.targets[0] as Material;
 
-            // draw enum
             var index = (int)prop.floatValue;
             index = EditorGUILayout.Popup(label, index, m_ShaderPassNames);
             prop.floatValue = index;
@@ -90,9 +89,9 @@ namespace LcLShaderEditor
                 material.SetShaderPassEnabled(shaderPassName, i == index);
             }
         }
-        override public float GetPropertyHeight(MaterialProperty prop, string label, MaterialEditor editor)
-        {
-            return 0;
-        }
+        // override public float GetPropertyHeight(MaterialProperty prop, string label, MaterialEditor editor)
+        // {
+        //     return 0;
+        // }
     }
 }
