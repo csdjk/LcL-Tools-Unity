@@ -1,11 +1,10 @@
 using UnityEngine;
-using UnityEditor;
 using System.Reflection;
 using System.Collections.Generic;
 using System;
+using UnityEditor;
 using System.Linq;
 using System.IO;
-using Object = System.Object;
 
 namespace LcLTools
 {

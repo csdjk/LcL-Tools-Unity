@@ -3,9 +3,6 @@ using UnityEngine;
 using UnityEditor;
 using UnityEngine.Rendering;
 using System.Text.RegularExpressions;
-using TMPro.EditorUtilities;
-using System.Linq;
-using LcLShaderEditor;
 
 namespace LcLShaderEditor
 {
@@ -312,8 +309,7 @@ namespace LcLShaderEditor
                 return;
 
             Undo.RecordObject(material, "Paste Material");
-
-            EditorShaderUtilities.CopyMaterialProperties(m_CopiedProperties, material);
+            ShaderEditorHandler.CopyMaterialProperties(m_CopiedProperties, material);
             material.shaderKeywords = m_CopiedProperties.shaderKeywords;
         }
 

@@ -8,12 +8,20 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: LcLShaderGUI
-  m_Shader: {fileID: 4800000, guid: aa39a36388975bd4da6b5c6260172e87, type: 3}
+  m_Shader: {fileID: 4800000, guid: cff561d3d1eb0a540bc7f32c520f90ab, type: 3}
   m_ValidKeywords:
   - _TEST
   m_InvalidKeywords:
   - _OVERLAY_NONE
   - _TOGGLE
+  - _USECOOLSHADOWCOLORORTEX_ON
+  - _USELIGHTMAPCOLORAO_ON
+  - _USEMATERIAL2_ON
+  - _USEMATERIAL3_ON
+  - _USEMATERIAL4_ON
+  - _USEMATERIAL5_ON
+  - _USEVERTEXCOLORAO_ON
+  - _USEVERTEXRAMPWIDTH_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -28,6 +36,26 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _LightMapTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MTMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MTSpecularRamp:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _PackedShadowRampTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _RampTex:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -38,9 +66,54 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _BACK_FACE: 0
+    - _BACK_FACE_FoldoutState: 1
+    - _Common: 0
+    - _Common_FoldoutState: 0
+    - _CullMode: 2
+    - _EmissionScaler: 1
+    - _EmissionScaler1: 1
+    - _EmissionScaler2: 1
+    - _EmissionScaler3: 1
+    - _EmissionScaler4: 1
+    - _EmissionScaler5: 1
+    - _EmissionStrengthLerp: 0
+    - _FaceBlushStrength: 0
     - _HeightCutoff: 1.2
     - _HeightCutoff2: 1.2
     - _HeightFactor: 1
+    - _HitColorFresnelPower: 1.5
+    - _HitColorScaler: 6
+    - _HitEffect: 0
+    - _HitEffect_FoldoutState: 1
+    - _LightArea: 0.55
+    - _LightIntensity: 0.75
+    - _MTMapBrightness: 4
+    - _MTMapTileScale: 1
+    - _MTParams: 0
+    - _MTParams_FoldoutState: 1
+    - _MTSharpLayerOffset: 1
+    - _MTShininess: 15
+    - _MTSpecularAttenInShadow: 0.2
+    - _MTSpecularScale: 60
+    - _MTUseSpecularRamp: 0
+    - _MainTexAlphaCutoff: 0.42
+    - _MainTexAlphaUse: 2
+    - _Material1: 0
+    - _Material1_FoldoutState: 1
+    - _Material2: 0
+    - _Material2_FoldoutState: 1
+    - _Material3: 0
+    - _Material3_FoldoutState: 1
+    - _Material4: 0
+    - _Material4_FoldoutState: 1
+    - _Material5: 0
+    - _Material5_FoldoutState: 1
+    - _MaxOutlineZOffset: 1
+    - _OffsetFactor: 0
+    - _OutlineCorrectionWidth: 1.3
+    - _OutlineType: 2
+    - _OutlineWidth: 2
     - _Overlay: 0
     - _PassEnum: 0
     - _Property1: 0
@@ -55,9 +128,41 @@ Material:
     - _SWITCH4: 0
     - _SWITCH4_FoldoutState: 1
     - _SWITCH_FoldoutState: 1
+    - _Scale: 0.01
+    - _ShadowRampWidth: 1
+    - _Shininess: 10
+    - _Shininess2: 10
+    - _Shininess3: 10
+    - _Shininess4: 10
+    - _Shininess5: 10
+    - _SpecMulti: 0.3
+    - _SpecMulti2: 0.2
+    - _SpecMulti3: 0.1
+    - _SpecMulti4: 0.1
+    - _SpecMulti5: 0.1
     - _StencilFail: 0
     - _TEST: 1
     - _TOGGLE: 1
+    - _TOON_OUT_LINE: 1
+    - _TOON_OUT_LINE_FoldoutState: 1
+    - _TRANSLUCENCY: 0
+    - _TRANSLUCENCY_FoldoutState: 1
+    - _Textures: 0
+    - _Textures_FoldoutState: 1
+    - _TransDistortion: 0.3
+    - _TransIntensity: 1
+    - _TransScattering: 1
+    - _UseBackFaceUV2: 0
+    - _UseCoolShadowColorOrTex: 1
+    - _UseLightMapColorAO: 1
+    - _UseMaterial2: 1
+    - _UseMaterial3: 1
+    - _UseMaterial4: 1
+    - _UseMaterial5: 1
+    - _UseSaturation: 0
+    - _UseShadowTransition: 0
+    - _UseVertexColorAO: 1
+    - _UseVertexRampWidth: 1
     - _WaveAmp: 1
     - _WaveAmp2: 0.948
     - _WaveAmp3: 1
@@ -65,7 +170,28 @@ Material:
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _Color2: {r: 1, g: 1, b: 1, a: 1}
+    - _Color3: {r: 1, g: 1, b: 1, a: 1}
+    - _Color4: {r: 1, g: 1, b: 1, a: 1}
+    - _Color5: {r: 1, g: 1, b: 1, a: 1}
+    - _ElementRimColor: {r: 0, g: 0, b: 0, a: 0}
+    - _EmissionColor_MHY: {r: 1, g: 1, b: 1, a: 1}
+    - _FaceBlushColor: {r: 1, g: 0.60383, b: 0.44799, a: 1}
+    - _HitColor: {r: 0, g: 0, b: 0, a: 0}
     - _LightDir: {r: 0, g: 0, b: -1, a: 0}
+    - _MTMapDarkColor: {r: 0.30499, g: 0.07036, b: 0.17755, a: 1}
+    - _MTMapLightColor: {r: 1, g: 0.99309, b: 0.90256, a: 1}
+    - _MTShadowMultiColor: {r: 0.56952, g: 0.42276, b: 0.55207, a: 1}
+    - _MTSharpLayerColor: {r: 1, g: 1, b: 1, a: 1}
+    - _MTSpecularColor: {r: 1, g: 0.76079, b: 0.51114, a: 1}
+    - _OutlineColor: {r: 0, g: 0, b: 0, a: 0}
+    - _OutlineColor2: {r: 0.31342, g: 0.08105, b: 0.08105, a: 1}
+    - _OutlineColor3: {r: 0.27258, g: 0.08602, b: 0.08602, a: 1}
+    - _OutlineColor4: {r: 0.4253, g: 0.13803, b: 0.13803, a: 1}
+    - _OutlineColor5: {r: 0.03749, g: 0.05204, b: 0.11131, a: 1}
+    - _OutlineWidthAdjustScales: {r: 0.105, g: 0.245, b: 0.6, a: 1}
+    - _OutlineWidthAdjustZs: {r: 0.01, g: 2, b: 6, a: 1}
+    - _SpecularColor: {r: 1, g: 1, b: 1, a: 1}
+    - _TransColor: {r: 1, g: 1, b: 1, a: 1}
     - _WindSpeed: {r: 1, g: 1, b: 1, a: 1}
     - _WorldSize: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []

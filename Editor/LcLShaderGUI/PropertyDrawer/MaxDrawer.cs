@@ -39,8 +39,10 @@ namespace LcLShaderEditor
             m_Max.w = maxw;
         }
 
-        override public void OnGUI(Rect pos, MaterialProperty prop, string label, MaterialEditor editor)
+        override public void OnGUI(Rect pos, MaterialProperty prop, GUIContent label, MaterialEditor editor)
         {
+            editor.DefaultShaderPropertyInternal(pos, prop, label);
+
             var type = prop.type;
             if (type == MaterialProperty.PropType.Float)
             {
@@ -82,7 +84,7 @@ namespace LcLShaderEditor
             }
             else
             {
-                editor.DefaultShaderProperty(prop, label);
+                editor.DefaultShaderProperty(prop, label.text);
             }
         }
         // override public float GetPropertyHeight(MaterialProperty prop, string label, MaterialEditor editor)

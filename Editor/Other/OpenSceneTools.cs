@@ -206,7 +206,7 @@ namespace LcLTools
 
         static OpenSceneTools()
         {
-            ToolbarExtender.LeftToolbarGUI.Add(OnToolbarGUI);
+            // ToolbarExtender.LeftToolbarGUI.Add(OnToolbarGUI);
         }
 
         static void OnToolbarGUI()
