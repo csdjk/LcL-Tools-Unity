@@ -3,6 +3,10 @@ Shader "LcL/ShaderGUI/LcLShaderGUI2"
 {
     Properties
     {
+        [Toggle(_SWITCH)] _SWITCH ("Toggle", int) = 0
+        [ShowIf(_SWITCH, 1)]_Color("Color", Color) = (1, 1, 1, 1)
+        [ShowIf(_SWITCH, 0)]_Tex("Texture2", 2D) = "white" { }
+
         _Test ("Test", float) = 0
         [Max(0.1)]_Test2 ("Test", float) = 0
         [Min(0.1,0,2,3)]_TestV ("TestV", Vector) = (0, 0, 0, 0)
