@@ -41,8 +41,6 @@ namespace LcLShaderEditor
 
         override public void OnGUI(Rect pos, MaterialProperty prop, GUIContent label, MaterialEditor editor)
         {
-            editor.DefaultShaderPropertyInternal(pos, prop, label);
-
             var type = prop.type;
             if (type == MaterialProperty.PropType.Float)
             {
