@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+
 namespace LcLTools
 {
     [AddComponentMenu("LcLTools/AutoRotation")]
@@ -8,18 +9,42 @@ namespace LcLTools
     {
         public GameObject target;
         public float speed = 10f;
+        private Vector3 mouseReference;
 
         void Update()
         {
-            // 绕目标为中心旋转
-            if (target)
+            if (Input.GetMouseButtonDown(0))
             {
-                transform.RotateAround(target.transform.position, Vector3.up, speed * Time.deltaTime);
+                mouseReference = Input.mousePosition;
             }
-            //  绕自身中心旋转
+            else if (Input.GetMouseButton(0))
+            {
+                Vector3 displacement = mouseReference - Input.mousePosition;
+                mouseReference = Input.mousePosition;
+                float rotation = displacement.x * speed * Time.deltaTime;
+
+                if (target)
+                {
+                    // 绕目标旋转
+                    transform.RotateAround(target.transform.position, Vector3.up, rotation);
+                }
+                else
+                {
+                    // 绕自身旋转
+                    transform.RotateAround(transform.position, Vector3.up, rotation);
+                }
+            }
             else
             {
-                transform.RotateAround(transform.position, Vector3.up, speed * Time.deltaTime);
+                // 自动旋转
+                if (target)
+                {
+                    transform.RotateAround(target.transform.position, Vector3.up, speed * Time.deltaTime);
+                }
+                else
+                {
+                    transform.RotateAround(transform.position, Vector3.up, speed * Time.deltaTime);
+                }
             }
         }
     }
