@@ -1,16 +1,14 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace LcLTools
 {
     [AddComponentMenu("LcLTools/AutoRandomMove")]
     public class AutoRandomMove : MonoBehaviour
     {
+        public int seed = 0;
         public float radius = 1f;
         [Range(0.1f, 100)]
         public float speed = 1;
-        public int seed = 0;
         public bool isFixedMode = false;
         public Vector3 fixedStartPos;
         public Vector3 fixedEndPos;

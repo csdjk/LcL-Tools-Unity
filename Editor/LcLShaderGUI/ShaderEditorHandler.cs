@@ -128,7 +128,7 @@ namespace LcLShaderEditor
 
 
         public static readonly float revertButtonWidth = 20;
-        public static readonly float space = 5;
+        public static readonly float space = 1;
 
         public static Rect SplitRevertButtonRect(ref Rect rect)
         {
