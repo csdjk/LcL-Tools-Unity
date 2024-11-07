@@ -93,7 +93,7 @@ namespace LcLTools
                         material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
                     else
                         material = new Material(Shader.Find("Standard"));
-                        
+
                     if (!AssetDatabase.IsValidFolder(path))
                     {
                         path = Path.GetDirectoryName(path);
@@ -106,7 +106,7 @@ namespace LcLTools
         }
 
 
-        // 定位到当前使用的RenderAssets 
+        // 定位到当前使用的RenderAssets
         [MenuItem("LcLTools/HotKeys/定位到RenderAssets &r")]
         static void QuickPositioningRenderAssets()
         {
@@ -149,7 +149,7 @@ namespace LcLTools
         [MenuItem("LcLTools/HotKeys/隐藏显示Object #a")]
         static void QuickSetActive()
         {
-            // var go = Selection.activeGameObject;
+            if(Application.isPlaying) return;
 
             var trsArr = Selection.transforms;
             if (trsArr == null) return;
