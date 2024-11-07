@@ -165,7 +165,16 @@ namespace LcLShaderEditor
                         float propertyHeight = materialEditor.GetPropertyHeight(node.property, node.property.displayName);
                         Rect controlRect = EditorGUILayout.GetControlRect(true, propertyHeight, EditorStyles.layerMaskField);
                         var revertRect = ShaderEditorHandler.SplitRevertButtonRect(ref controlRect);
+
+                        EditorGUI.showMixedValue = node.property.hasMixedValue;
+                        var oldLabelWidth = EditorGUIUtility.labelWidth;
+                        EditorGUIUtility.labelWidth = 0f;
+
                         materialEditor.ShaderProperty(controlRect, node.property, node.property.displayName);
+
+                        EditorGUIUtility.labelWidth = oldLabelWidth;
+                        EditorGUI.showMixedValue = false;
+
                         //重置属性
                         if (!IsPropertyDefault(node))
                             ShaderEditorHandler.DrawPropertyRevertButton(revertRect, () => RevertProperty(node));

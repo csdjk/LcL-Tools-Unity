@@ -2,7 +2,8 @@
     "name": "LCLGUI",
     "rootNamespace": "",
     "references": [
-        "GUID:7a06e8061b7b71245935d06decc83268"
+        "GUID:7a06e8061b7b71245935d06decc83268",
+        "GUID:12723c107ff0107438f47dd02acfd92b"
     ],
     "includePlatforms": [
         "Editor"
