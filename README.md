@@ -2,9 +2,7 @@
 
 ![1709892033153](image/README/1709892033153.png)
 
-Unity个人常用工具。
-
-一部分由自己开发，一部分来源于其他开发者开发（这里只作为收集，会标明来源）。
+个人常用工具，一部分由自己开发，一部分来源于其他开发者开发（这里只作为收集，会标明来源）。
 
 ## 自己开发的工具：
 
@@ -16,10 +14,13 @@ Feature：
 
 - 无限嵌套可折叠区域
 - Texture缩略图
+- 重置属性默认值
+- Vector Slider
+- 限制Min\Max
 - 根据Toggle显示隐藏属性
 - 切换Pass
 
-![1709521640412](image/README/1709521640412.png)
+![1709521640412](image/README/ShaderGUI.png)
 
 ### Shader变体收集工具
 
@@ -94,6 +95,16 @@ Feature：
 需要修改手动脚本里的路径。
 
 ![1709889616602](image/README/1709889616602.png)
+
+## Python Tools
+
+### Snapdragon Profiler 截帧数据可视化工具
+
+
+[SnapdragonProfilerTools](https://github.com/csdjk/LcL-Tools-Unity/blob/main/Python/SnapdragonProfilerTools.py)
+
+![snapTools_compressed](image/README/snapTools_compressed.gif)
+
 
 ## 非本人开发的工具：
 
