@@ -144,6 +144,8 @@ Shader "LcL/Debugger"
                 #ifdef _INVERT_ON
                     res = 1 - res;
                 #endif
+
+                res = saturate(res);
                 return float4(pow(res, _Gamma), 1);
 
 
