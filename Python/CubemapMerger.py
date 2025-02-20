@@ -128,12 +128,13 @@ class CubemapMerger(QMainWindow):
             }
     
             output_data = {c: np.zeros((base_size[1]*3, base_size[0]*4), dtype=np.float16) for c in ['R', 'G', 'B']}
-    
+           
             for face in ordered_faces:
                 x_offset, y_offset = face_positions[face]
                 for c in ['R', 'G', 'B']:
-                    output_data[c][y_offset*base_size[1]:(y_offset+1)*base_size[1], x_offset*base_size[0]:(x_offset+1)*base_size[0]] = face_images[face][c]
-    
+                    flipped_face = np.flipud(face_images[face][c])
+                    output_data[c][y_offset*base_size[1]:(y_offset+1)*base_size[1], x_offset*base_size[0]:(x_offset+1)*base_size[0]] = flipped_face
+            
             combined_data = {c: output_data[c].tobytes() for c in ['R', 'G', 'B']}
     
             output_dir = os.path.dirname(self.selected_files[0])
