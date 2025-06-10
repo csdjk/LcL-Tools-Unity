@@ -37,7 +37,7 @@ namespace LcLTools
 
     public class JaveLin_RDC_CSV2FBX : EditorWindow
     {
-        [MenuItem("LcLTools/CSV To FBX")]
+        [MenuItem("LcLTools/RenderDoc/CSV To FBX")]
         private static void _Show()
         {
             var win = EditorWindow.GetWindow<JaveLin_RDC_CSV2FBX>();
