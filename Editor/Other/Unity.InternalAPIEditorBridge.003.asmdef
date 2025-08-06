@@ -1,14 +1,10 @@
 {
-    "name": "LcLTools.Editor",
+    "name": "Unity.InternalAPIEditorBridge.003",
     "rootNamespace": "",
     "references": [
-        "LcLTools.Libs",
-        "LcLTools.Runtime",
-        "Unity.Formats.Fbx.Runtime",
-        "Unity.Formats.Fbx.Editor",
-        "Unity.RenderPipeline.Universal.ShaderLibrary",
-        "Unity.RenderPipelines.Core.Runtime",
-        "Unity.RenderPipelines.Universal.Runtime"
+        "GUID:9e5ce4ff48d63b545a2992fe5218cd9c",
+        "GUID:0b42447a91f9e5a46bccc016b84ed24d",
+        "GUID:24a5497297d18284bb060b5325ab97bd"
     ],
     "includePlatforms": [
         "Editor"

@@ -1,67 +1,151 @@
-﻿using UnityEditor;
+﻿using System;
+using System.Globalization;
+using LcLTools.UnityToolbarExtender;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.Experimental.GlobalIllumination;
+
 namespace LcLTools
 {
     public class ColorPickerWindow : EditorWindow
     {
+        public static bool isPickingColor = false;
+
         [MenuItem("LcLTools/ColorPicker")]
         public static void ShowWindow()
         {
+            isPickingColor = false;
             EditorWindow.GetWindow<ColorPickerWindow>("ColorPicker");
         }
 
-        private string _colorLuminance = "1";
+        private string m_ColorLuminance = "1";
+        private string m_ColorRGB = "1f, 1f, 1f, 1f";
 
-        private string _colorHex = "FFFFFFFF";
-        private string _colorRGB = "1f, 1f, 1f, 1f";
-        private string _colorRGB32 = "255, 255, 255, 255";
-        private string _colorHSV = "100, 100, 100, 100";
-        private Color _color = new Color(1, 1, 1, 1);
+        private string m_LinearColorRGB = "1, 1, 1, 1";
+        private string m_LinearLuminance = "1";
+
+        private string m_ColorRGB32 = "255, 255, 255, 255";
+        private string m_ColorHex = "FFFFFFFF";
+        private string m_ColorHSV = "100, 100, 100, 100";
+        private Color m_Color = new Color(1, 1, 1, 1);
 
         void OnGUI()
         {
+            EditorGUIUtility.labelWidth = 80;
 
-            EditorGUILayout.TextField("Luminance:", _colorLuminance);
-            EditorGUILayout.TextField("Hex:", _colorHex);
-            EditorGUILayout.TextField("RGB:", _colorRGB);
-            EditorGUILayout.TextField("RGB32:", _colorRGB32);
-            EditorGUILayout.TextField("HSV:", _colorHSV);
-
-            Color tempColorValue = EditorGUILayout.ColorField(_color);
-
-            if (tempColorValue != _color)
+            EditorGUILayout.Space();
+            GUILayout.BeginHorizontal();
             {
-                _color = tempColorValue;
+                EditorGUILayout.ColorField(new GUIContent("Color"), m_Color, false, true, false,
+                    GUILayout.ExpandWidth(true));
+                var icon = EditorGUIUtility.IconContent("Grid.PickingTool").image;
+                if (GUILayout.Button(new GUIContent("", icon), GUILayout.Width(25)))
+                {
+                    isPickingColor = true;
+                    EyeDropper.Start(GUIView.current);
+                    GUIUtility.ExitGUI();
+                }
+            }
+            GUILayout.EndHorizontal();
+
+            EditorGUILayout.Space();
+
+            GUILayout.BeginHorizontal();
+            {
+                EditorGUILayout.TextField("SRGB:", m_ColorRGB);
+                // EditorGUILayout.Space();
+                EditorGUILayout.TextField("Luminance:", m_ColorLuminance);
+            }
+            GUILayout.EndHorizontal();
+
+            EditorGUILayout.Space();
+            GUILayout.BeginHorizontal();
+            {
+                EditorGUILayout.TextField("LinearRGB:", m_LinearColorRGB);
+                // EditorGUILayout.Space(5);
+                EditorGUILayout.TextField("LinearLum:", m_LinearLuminance);
+            }
+            GUILayout.EndHorizontal();
+
+            EditorGUILayout.Space();
+            EditorGUILayout.TextField("RGB32:", m_ColorRGB32);
+            EditorGUILayout.Space();
+            EditorGUILayout.TextField("Hex:", m_ColorHex);
+            EditorGUILayout.Space();
+            EditorGUILayout.TextField("HSV:", m_ColorHSV);
+
+            // 检测按键事件
+            Event e = Event.current;
+            if (Event.current.commandName == "EyeDropperClicked")
+            {
+                isPickingColor = false;
+                EyeDropper.End();
+                Debug.Log("Color picking canceled.");
+            }
+
+            if (isPickingColor)
+            {
+                m_Color = EyeDropper.GetPickedColor();
                 UpdateColor();
-                this.Repaint();
+                //刷新界面
+                Repaint();
             }
         }
 
-        private void OnSceneGUI()
-        {
-            Color tempColorValue = EditorGUILayout.ColorField(_color);
-        }
 
-        private float Luminance(Color color)
-        {
-            return 0.2125f * color.r + 0.7154f * color.g + 0.0721f * color.b;
-        }
         /// <summary>
         /// 更新颜色值
         /// </summary>
         private void UpdateColor()
         {
-            _colorHex = ColorUtility.ToHtmlStringRGBA(_color);
+            m_ColorHex = ColorUtility.ToHtmlStringRGBA(m_Color);
 
-            _colorRGB = string.Format("{0}, {1}, {2}, {3}", _color.r, _color.g, _color.b, _color.a);
+            m_ColorRGB = $"{m_Color.r}, {m_Color.g}, {m_Color.b}, {m_Color.a}";
 
-            Color32 color32 = _color;
-            _colorRGB32 = string.Format("{0}, {1}, {2}, {3}", color32.r, color32.g, color32.b, color32.a);
+            var linearColor = m_Color.linear;
+            m_LinearColorRGB = $"{linearColor.r}, {linearColor.g}, {linearColor.b}, {linearColor.a}";
+
+            Color32 color32 = m_Color;
+            m_ColorRGB32 = $"{color32.r}, {color32.g}, {color32.b}, {color32.a}";
 
             float h, s, v;
-            Color.RGBToHSV(_color, out h, out s, out v);
-            _colorHSV = string.Format("{0}, {1}, {2}", h, s, v);
-            _colorLuminance = Luminance(_color).ToString();
+            Color.RGBToHSV(m_Color, out h, out s, out v);
+            m_ColorHSV = $"{h}, {s}, {v}";
+
+            m_ColorLuminance = v.ToString(CultureInfo.CurrentCulture);
+
+            Color.RGBToHSV(linearColor, out h, out s, out v);
+            m_LinearLuminance = v.ToString(CultureInfo.CurrentCulture);
+        }
+
+        protected void OnDestroy()
+        {
+            if (isPickingColor)
+            {
+                isPickingColor = false;
+                EyeDropper.End();
+            }
+        }
+    }
+
+
+    [InitializeOnLoad]
+    public class ColorPicker
+    {
+        static ColorPicker()
+        {
+            ToolbarExtender.LeftToolbarGUI.Add(OnToolbarGUI);
+        }
+
+        static void OnToolbarGUI()
+        {
+            var style = new GUIStyle(EditorStyles.toolbarButton);
+            style.alignment = TextAnchor.MiddleCenter;
+            var icon = EditorGUIUtility.IconContent("Grid.PickingTool").image;
+            if (GUILayout.Button(new GUIContent("", icon), style, GUILayout.Width(25)))
+            {
+                ColorPickerWindow.ShowWindow();
+            }
         }
     }
 }
