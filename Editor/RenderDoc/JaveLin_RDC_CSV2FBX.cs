@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using PlasticGui.WorkspaceWindow.Merge;
+using PlasticPipe.PlasticProtocol.Messages;
 using UnityEditor;
 using UnityEditor.Formats.Fbx.Exporter;
 
@@ -35,7 +37,7 @@ namespace LcLTools
 
     public class JaveLin_RDC_CSV2FBX : EditorWindow
     {
-        [MenuItem("LcLTools/CSV To FBX")]
+        [MenuItem("LcLTools/RenderDoc/CSV To FBX")]
         private static void _Show()
         {
             var win = EditorWindow.GetWindow<JaveLin_RDC_CSV2FBX>();
@@ -547,6 +549,70 @@ namespace LcLTools
             return new Vector3(list[0], list[1], list[2]);
         }
 
+        public static Matrix4x4 ParseMatrixFromString()
+        {
+            string clipboardContent = GUIUtility.systemCopyBuffer;
+            // 按行分割字符串
+            string[] matrixStrings = clipboardContent.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+
+            if (matrixStrings.Length != 4)
+            {
+                Debug.LogError("Invalid matrix string format. Expected 4 rows.");
+                //UI tips
+                EditorUtility.DisplayDialog("Info", "请先从Renderdoc中复制M矩阵到粘贴板", "OK");
+
+                return Matrix4x4.identity;
+            }
+
+            Matrix4x4 matrix = new Matrix4x4();
+
+            for (int i = 0; i < 4; i++)
+            {
+                string row = matrixStrings[i];
+                string[] elements = row.Split(new char[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+                // if (elements.Length != 4)
+                // {
+                //     Debug.LogError($"Invalid row format at index {i}. Expected 4 elements.");
+                //     return Matrix4x4.identity;
+                // }
+
+                matrix[0,i] = float.Parse(elements[1]);
+                matrix[1,i] = float.Parse(elements[2]);
+                matrix[2,i] = float.Parse(elements[3]);
+                matrix[3,i] = float.Parse(elements[4]);
+            }
+
+            return matrix;
+        }
+
+        public static void DecomposeMatrix(Matrix4x4 matrix, out Vector3 position, out Quaternion rotation, out Vector3 scale)
+        {
+            // 提取位移
+            position = new Vector3(matrix.m03, matrix.m13, matrix.m23);
+
+            // 提取缩放
+            scale.x = new Vector3(matrix.m00, matrix.m01, matrix.m02).magnitude;
+            scale.y = new Vector3(matrix.m10, matrix.m11, matrix.m12).magnitude;
+            scale.z = new Vector3(matrix.m20, matrix.m21, matrix.m22).magnitude;
+
+            // 提取旋转
+            Matrix4x4 rotationMatrix = new Matrix4x4();
+            rotationMatrix.m00 = matrix.m00 / scale.x;
+            rotationMatrix.m01 = matrix.m01 / scale.x;
+            rotationMatrix.m02 = matrix.m02 / scale.x;
+            rotationMatrix.m10 = matrix.m10 / scale.y;
+            rotationMatrix.m11 = matrix.m11 / scale.y;
+            rotationMatrix.m12 = matrix.m12 / scale.y;
+            rotationMatrix.m20 = matrix.m20 / scale.z;
+            rotationMatrix.m21 = matrix.m21 / scale.z;
+            rotationMatrix.m22 = matrix.m22 / scale.z;
+
+            rotation = Quaternion.LookRotation(rotationMatrix.GetColumn(2), rotationMatrix.GetColumn(1));
+
+            Debug.Log($"Position: {position}, Scale: {scale}, Rotation: {rotation.eulerAngles}");
+        }
+
         private bool refresh_data = false;
         private bool csv_asset_changed = false;
         private void Output_RDC_CSV_Handle()
@@ -614,6 +680,15 @@ namespace LcLTools
                 if (GUILayout.Button("Reset Settings"))
                 {
                     refresh_data = true;
+                }
+                if (GUILayout.Button("计算旋转缩放位置"))
+                {
+                    Vector3 position, scale;
+                    Quaternion rotation;
+                    DecomposeMatrix(ParseMatrixFromString(), out position, out rotation, out scale);
+                    vertexOffset = position;
+                    vertexRotation = rotation.eulerAngles;
+                    vertexScale = scale;
                 }
                 if (GUILayout.Button("Export FBX"))
                 {
