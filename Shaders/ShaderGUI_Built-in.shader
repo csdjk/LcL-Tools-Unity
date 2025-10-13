@@ -5,6 +5,8 @@ Shader "LcL/ShaderGUI/ShaderGUI_Built-in"
     // 材质属性面常见类型
     Properties
     {
+        [IntRange] _RampStep("RampStep", Range(1,10)) = 1
+
         [Header(Custom)]
         // 自定义枚举
         [Enum(CustomEnum1, 1, CustomEnum2, 2)]  _CustomEnum ("CustomEnum", Float) = 1
