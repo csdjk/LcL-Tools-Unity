@@ -1,0 +1,67 @@
+﻿#pragma kernel GenerateSDF
+#pragma kernel MergeSDF
+
+// 输入和输出纹理
+Texture2D<float4> InputTexture;
+RWTexture2D<float4> OutputSDF;
+RWTexture2D<float4> MergedSDF;
+Texture2D<float4> SDF1;
+Texture2D<float4> SDF2;
+
+// 参数
+uint TextureWidth;
+uint TextureHeight;
+float ScaleFactor; // 距离映射到颜色的缩放系数
+float BlendFactor;
+
+// 判断像素是内部还是外部的函数
+bool IsInside(float4 pixel, float threshold)
+{
+    // 根据选择的通道和阈值确定内外
+    return pixel.r < threshold;
+}
+
+// 无边界SDF生成
+[numthreads(8,8,1)]
+void GenerateSDF(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= TextureWidth || id.y >= TextureHeight)
+        return;
+    
+    // 当前像素状态
+    float4 centerPixel = InputTexture[id.xy];
+    bool isInside = IsInside(centerPixel, 0.5); // 使用0.5作为阈值，因为输入已经是二值化的
+
+    // 查找内部/外部边界的最短距离
+    float minDist = 99999.0; // 使用一个足够大的数而不是"最大距离"
+    
+    // 扫描整个图像找最近的不同类型像素
+    for (uint y = 0; y < TextureHeight; y++)
+    {
+        for (uint x = 0; x < TextureWidth; x++)
+        {
+            float4 pixel = InputTexture[uint2(x, y)];
+            bool pixelInside = IsInside(pixel, 0.5);
+            
+            // 如果找到不同类型的像素
+            if (pixelInside != isInside)
+            {
+                float dx = (float)x - (float)id.x;
+                float dy = (float)y - (float)id.y;
+                float dist = sqrt(dx*dx + dy*dy);
+                
+                minDist = min(minDist, dist);
+            }
+        }
+    }
+    
+    // 计算有符号距离（内部为正，外部为负）
+    float signedDist = isInside ? minDist : -minDist;
+    
+    // 0.5是归一化后的中点 (对应C++中的128/255)
+    float normalizedDist = signedDist * ScaleFactor + 0.5;
+    
+    // 将结果写入所有通道便于可视化
+    OutputSDF[id.xy] = float4(normalizedDist, normalizedDist, normalizedDist, 1.0);
+}
+
