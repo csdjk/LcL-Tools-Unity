@@ -3,6 +3,7 @@ using UnityEditor;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
+using LcLTools;
 
 public class SDFTextureGenerator : EditorWindow
 {
@@ -372,7 +373,6 @@ public class SDFTextureGenerator : EditorWindow
                 {
                     for (int x = 0; x < textureSize; x++)
                     {
-                        // 获取当前纹理和下一个```csharp
                         // 获取当前纹理和下一个纹理的像素值
                         Color curPixel = sdfTextures[curTexIndex].GetPixel(x, y);
                         Color nextPixel = sdfTextures[nextTexIndex].GetPixel(x, y);
@@ -431,7 +431,7 @@ public class SDFTextureGenerator : EditorWindow
                 Directory.CreateDirectory(sdfLerpFolder);
             }
 
-            int levelStep = 255 / (sdfTextures.Count - 1);
+            int levelStep = lerpFrames / (sdfTextures.Count - 1);
 
             // 创建一个单一的输出纹理
             Texture2D resultTexture = new Texture2D(textureSize, textureSize, TextureFormat.RGB24, false);
@@ -452,7 +452,7 @@ public class SDFTextureGenerator : EditorWindow
                     int accumulatedResult = 0;
 
                     // 在这个像素位置执行完整的插值序列
-                    for (int i = 0; i < 255; i++)
+                    for (int i = 0; i < lerpFrames; i++)
                     {
                         // 检查索引是否有效
                         if (nextTexIndex >= sdfTextures.Count)
@@ -485,7 +485,7 @@ public class SDFTextureGenerator : EditorWindow
                     }
 
                     // 设置像素的最终结果
-                    float normalizedResult = accumulatedResult / 255f;
+                    float normalizedResult = accumulatedResult / (float)lerpFrames;
                     resultTexture.SetPixel(x, y, new Color(normalizedResult, normalizedResult, normalizedResult));
 
                     // 更新进度
@@ -561,5 +561,17 @@ public class SDFTextureGenerator : EditorWindow
     {
         byte[] bytes = texture.EncodeToPNG();
         File.WriteAllBytes(filePath, bytes);
+
+        // 设置导入设置：关闭sRGB，关闭压缩
+        string assetPath = filePath;
+        assetPath = LcLUtility.AssetsRelativePath(assetPath);
+        AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
+        TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer != null)
+        {
+            importer.sRGBTexture = false;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.SaveAndReimport();
+        }
     }
 }
