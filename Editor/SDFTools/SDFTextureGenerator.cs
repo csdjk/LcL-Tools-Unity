@@ -31,6 +31,7 @@ public class SDFTextureGenerator : EditorWindow
 
     // 插值帧数
     private int lerpFrames = 255;
+    private bool useGPU = true;
 
     private enum InterpolationMethod
     {
@@ -82,8 +83,11 @@ public class SDFTextureGenerator : EditorWindow
         // SDF参数
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("SDF参数", EditorStyles.boldLabel);
-        scaleFactor = EditorGUILayout.Slider("缩放因子:", scaleFactor, 0.001f, 0.02f);
-        EditorGUILayout.HelpBox("缩放因子控制SDF的对比度。较小的值会产生更平滑的过渡，较大的值会产生更锐利的边界。\n对应C++算法的值约为0.004。", MessageType.Info);
+        useGPU = EditorGUILayout.Toggle("使用GPU加速:", useGPU);
+
+        // 缩放因子滑动条
+        var scaleContent = new GUIContent("缩放因子", "缩放因子控制SDF的对比度。较小的值会产生更平滑的过渡，较大的值会产生更锐利的边界。");
+        scaleFactor = EditorGUILayout.Slider(scaleContent, scaleFactor, 0.001f, 0.02f);
 
         // 插值参数
         EditorGUILayout.Space();
@@ -121,6 +125,10 @@ public class SDFTextureGenerator : EditorWindow
         }
     }
 
+    /// <summary>
+    /// 处理单张测试图像
+    /// </summary>
+    /// <param name="imagePath"> </param>
     private void ProcessSingleImage(string imagePath)
     {
         EditorUtility.DisplayProgressBar("处理测试图像", "生成SDF...", 0.5f);
@@ -224,16 +232,21 @@ public class SDFTextureGenerator : EditorWindow
         return result;
     }
 
+    /// <summary>
+    /// 生成单张SDF纹理
+    /// </summary>
+    /// <param name="sourceTexture"></param>
+    /// <returns></returns>
     private RenderTexture GenerateSingleSDF(Texture2D sourceTexture)
     {
         // 创建输入和输出纹理
-        RenderTexture inputTexture = new RenderTexture(textureSize, textureSize, 0, RenderTextureFormat.ARGB32);
+        RenderTexture inputTexture = new RenderTexture(textureSize, textureSize, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
         inputTexture.enableRandomWrite = true;
         inputTexture.Create();
 
         Graphics.Blit(sourceTexture, inputTexture);
 
-        RenderTexture outputTexture = new RenderTexture(textureSize, textureSize, 0, RenderTextureFormat.ARGB32);
+        RenderTexture outputTexture = new RenderTexture(textureSize, textureSize, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
         outputTexture.enableRandomWrite = true;
         outputTexture.Create();
 
@@ -254,6 +267,9 @@ public class SDFTextureGenerator : EditorWindow
         return outputTexture;
     }
 
+    /// <summary>
+    /// 生成SDF纹理
+    /// </summary>
     private void GenerateSDFTextures()
     {
         // 获取所有图像文件
@@ -320,9 +336,14 @@ public class SDFTextureGenerator : EditorWindow
         if (sdfTextures.Count > 1)
         {
             if (interpolationMethod == InterpolationMethod.SequenceFrames)
-                ProcessInterpolation(sdfTextures);
+                ProcessInterpolationSequenceFrames(sdfTextures);
             else
-                ProcessInterpolation2(sdfTextures);
+            {
+                if (useGPU)
+                    AccumulateSDFInterpolationWithComputeShader(sdfTextures);
+                else
+                    ProcessInterpolationMerge(sdfTextures);
+            }
         }
 
         // 清理SDF纹理
@@ -336,7 +357,11 @@ public class SDFTextureGenerator : EditorWindow
         EditorUtility.DisplayDialog("完成", "SDF纹理生成完毕", "确定");
     }
 
-    private void ProcessInterpolation(List<Texture2D> sdfTextures)
+    /// <summary>
+    /// 处理插值序列帧，生成lerpFrames帧插值图像
+    /// </summary>
+    /// <param name="sdfTextures"></param>
+    private void ProcessInterpolationSequenceFrames(List<Texture2D> sdfTextures)
     {
         if (sdfTextures.Count < 2)
             return;
@@ -417,7 +442,11 @@ public class SDFTextureGenerator : EditorWindow
         }
     }
 
-    private void ProcessInterpolation2(List<Texture2D> sdfTextures)
+    /// <summary>
+    /// 处理插值合并，生成单张插值结果图像
+    /// </summary>
+    /// <param name="sdfTextures"></param>
+    private void ProcessInterpolationMerge(List<Texture2D> sdfTextures)
     {
         if (sdfTextures.Count < 2)
             return;
@@ -487,7 +516,6 @@ public class SDFTextureGenerator : EditorWindow
                     // 设置像素的最终结果
                     float normalizedResult = accumulatedResult / (float)lerpFrames;
                     resultTexture.SetPixel(x, y, new Color(normalizedResult, normalizedResult, normalizedResult));
-
                     // 更新进度
                     processedPixels++;
                     if (processedPixels % 1000 == 0 || processedPixels == totalPixels)
@@ -501,7 +529,7 @@ public class SDFTextureGenerator : EditorWindow
 
             // 应用更改并保存最终图像
             resultTexture.Apply();
-            SaveTextureToFile(resultTexture, Path.Combine(sdfLerpFolder, "SDF.png"));
+            SaveTextureToFile(resultTexture, Path.Combine(sdfLerpFolder, "SDF_CPU.png"));
 
             DestroyImmediate(resultTexture);
             EditorUtility.ClearProgressBar();
@@ -511,6 +539,47 @@ public class SDFTextureGenerator : EditorWindow
             Debug.LogError($"插值处理过程中出错: {e.Message}");
             EditorUtility.ClearProgressBar();
         }
+    }
+
+    private void AccumulateSDFInterpolationWithComputeShader(List<Texture2D> sdfTextures)
+    {
+        if (sdfTextures.Count < 2)
+            return;
+
+        string sdfLerpFolder = Path.Combine(outputDirectory, "SDF_Lerp");
+        if (!Directory.Exists(sdfLerpFolder))
+            Directory.CreateDirectory(sdfLerpFolder);
+
+        // 创建 Texture2DArray
+        Texture2DArray sdfArray = new Texture2DArray(textureSize, textureSize, sdfTextures.Count, TextureFormat.RGBA32, false, true);
+        for (int i = 0; i < sdfTextures.Count; i++)
+            Graphics.CopyTexture(sdfTextures[i], 0, 0, sdfArray, i, 0);
+
+        sdfArray.Apply();
+
+        // 创建输出 RenderTexture
+        RenderTexture resultRT = new RenderTexture(textureSize, textureSize, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
+        resultRT.enableRandomWrite = true;
+        resultRT.Create();
+
+        int kernel = sdfGenerator.FindKernel("AccumulateSDFInterpolation");
+        sdfGenerator.SetTexture(kernel, "SDFTextures", sdfArray);
+        sdfGenerator.SetTexture(kernel, "OutputAccumulated", resultRT);
+        sdfGenerator.SetInt("TextureWidth", textureSize);
+        sdfGenerator.SetInt("TextureHeight", textureSize);
+        sdfGenerator.SetInt("SDFCount", sdfTextures.Count);
+        sdfGenerator.SetInt("LerpFrames", lerpFrames);
+
+        sdfGenerator.Dispatch(kernel, Mathf.CeilToInt(textureSize / 8f), Mathf.CeilToInt(textureSize / 8f), 1);
+
+        // 保存结果
+        SaveRenderTextureToFile(resultRT, Path.Combine(sdfLerpFolder, "SDF.png"));
+
+        resultRT.Release();
+        DestroyImmediate(resultRT);
+        DestroyImmediate(sdfArray);
+
+        EditorUtility.ClearProgressBar();
     }
 
     // 实用方法

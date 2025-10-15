@@ -64,3 +64,54 @@ void GenerateSDF(uint3 id : SV_DispatchThreadID)
     OutputSDF[id.xy] = float4(normalizedDist, normalizedDist, normalizedDist, 1.0);
 }
 
+#pragma kernel AccumulateSDFInterpolation
+
+// 输入SDF序列
+Texture2DArray<float4> SDFTextures;
+RWTexture2D<float4> OutputAccumulated;
+uint SDFCount;
+uint LerpFrames;
+
+[numthreads(8,8,1)]
+void AccumulateSDFInterpolation(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= TextureWidth || id.y >= TextureHeight)
+        return;
+
+    int accumulated = 0;
+    int levelStep = LerpFrames / (SDFCount - 1);
+
+    int lerpStep = 0;
+    int curTexIndex = 0;
+    int nextTexIndex = 1;
+
+    for (uint i = 0; i < LerpFrames; i++)
+    {
+        if (nextTexIndex >= SDFCount)
+            break;
+
+        float weight = (float)lerpStep / (float)levelStep;
+
+        float curValue = SDFTextures.Load(int4(id.x, id.y, curTexIndex, 0)).r * 255.0;
+        float nextValue = SDFTextures.Load(int4(id.x, id.y, nextTexIndex, 0)).r * 255.0;
+
+        // float lerpPixel = curValue * weight + nextValue * (1.0 - weight);
+        float lerpPixel = curValue * (1.0 - weight) + nextValue * weight;
+       
+        accumulated += (lerpPixel > 127.0) ? 0 : 1;
+
+        lerpStep++;
+        if (lerpStep >= levelStep)
+        {
+            lerpStep = 0;
+            curTexIndex++;
+            nextTexIndex++;
+        }
+    }
+
+    float normalized = accumulated / (float)LerpFrames;
+    OutputAccumulated[id.xy] = float4(normalized, normalized, normalized, 1.0);
+
+// debug
+    // OutputAccumulated[id.xy] = SDFTextures.Load(int4(id.x, id.y, 0, 0)).r;
+}
