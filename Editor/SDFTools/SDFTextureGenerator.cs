@@ -42,7 +42,7 @@ public class SDFTextureGenerator : EditorWindow
     private InterpolationMethod interpolationMethod = InterpolationMethod.AccumulatedResult;
 
 
-    [MenuItem("LcLTools/SDF Texture Generator")]
+    [MenuItem("LcLTools/纹理工具/SDF Texture Generator")]
     public static void ShowWindow()
     {
         GetWindow<SDFTextureGenerator>("SDF生成器");

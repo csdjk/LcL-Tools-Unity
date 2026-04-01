@@ -16,7 +16,7 @@ namespace LcLTools
         private List<string> missingProperties = new List<string>();
 
 
-        [MenuItem("LcLTools/检测Shader属性")]
+        [MenuItem("LcLTools/Shader 工具/检测Shader属性")]
         private static void ShowWindow()
         {
             var window = GetWindow<CheckShaderProperties>();

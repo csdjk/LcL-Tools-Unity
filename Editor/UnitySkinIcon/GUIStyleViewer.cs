@@ -7,7 +7,7 @@ namespace LcLTools
         private Vector2 scrollVector2 = Vector2.zero;
         private string search = "";
 
-        [MenuItem("LcLTools/UnitySkinIcon/GUI Style")]
+        [MenuItem("LcLTools/编辑器皮肤/GUI Style")]
         public static void InitWindow()
         {
             EditorWindow.GetWindow(typeof(GUIStyleViewer));

@@ -12,7 +12,7 @@ using UnityEditor;
 /// </summary>
 public class FixMaterials
 {
-    [MenuItem("LcLTools/FixMaterials")]
+    [MenuItem("LcLTools/Shader 工具/FixMaterials")]
     public static void UpdateOldProperties()
     {
         foreach (var mat in Selection.GetFiltered<Material>(SelectionMode.Assets))

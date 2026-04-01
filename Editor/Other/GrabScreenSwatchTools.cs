@@ -5,7 +5,7 @@ public class GrabScreenSwatchTools : EditorWindow
 {
     private static Texture m_Texture;
 
-    [MenuItem("LcLTools/GrabScreen")]
+    [MenuItem("LcLTools/截图 & 颜色/GrabScreen")]
     public static void ShowWindow()
     {
         m_Texture = GrabScreenSwatch(new Rect(0, 0, Screen.currentResolution.width, Screen.currentResolution.height));

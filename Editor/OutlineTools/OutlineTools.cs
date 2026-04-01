@@ -12,7 +12,7 @@ namespace LcLTools
 
     public class OutlineTools : EditorWindow
     {
-        [MenuItem("LcLTools/OutlineTools")]
+        [MenuItem("LcLTools/Shader 工具/OutlineTools")]
         private static void ShowWindow()
         {
             var window = GetWindow<OutlineTools>();

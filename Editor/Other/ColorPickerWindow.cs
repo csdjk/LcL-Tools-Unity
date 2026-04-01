@@ -11,7 +11,7 @@ namespace LcLTools
     {
         public static bool isPickingColor = false;
 
-        [MenuItem("LcLTools/ColorPicker")]
+        [MenuItem("LcLTools/截图 & 颜色/ColorPicker")]
         public static void ShowWindow()
         {
             isPickingColor = false;

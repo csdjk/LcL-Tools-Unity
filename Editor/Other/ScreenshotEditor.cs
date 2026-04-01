@@ -58,7 +58,7 @@ namespace LcLTools
             }
         }
 
-        [MenuItem("LcLTools/Screenshot/OpenWindow", false, 1000)]
+        [MenuItem("LcLTools/截图 & 颜色/Screenshot/OpenWindow", false, 1000)]
         static void OpenWindow()
         {
             ScreenshotEditor window = GetWindow<ScreenshotEditor>();
@@ -68,7 +68,7 @@ namespace LcLTools
             window.Focus();
         }
 
-        [MenuItem("LcLTools/Screenshot/Show Button In GameView", false, 1000)]
+        [MenuItem("LcLTools/截图 & 颜色/Screenshot/Show Button In GameView", false, 1000)]
         static void ShowButtonInGameView()
         {
             var icon = EditorGUIUtility.TrIconContent("FrameCapture", captureTips);
@@ -93,7 +93,7 @@ namespace LcLTools
             GameViewUtils.AddVisualElementToGameView(buttonGameView);
         }
 
-        [MenuItem("LcLTools/Screenshot/Hide Button In GameView", false, 1000)]
+        [MenuItem("LcLTools/截图 & 颜色/Screenshot/Hide Button In GameView", false, 1000)]
         static void HideButtonInGameView()
         {
             GameViewUtils.RemoveVisualElementFromGameView(buttonGameView);
@@ -166,7 +166,7 @@ namespace LcLTools
         }
 
 
-        [MenuItem("LcLTools/Screenshot/截图快捷键 %q")]
+        [MenuItem("LcLTools/截图 & 颜色/Screenshot/截图快捷键 %q")]
         public static void RenderCameraToFile()
         {
             Camera camera = ScreenCaptureCamera;

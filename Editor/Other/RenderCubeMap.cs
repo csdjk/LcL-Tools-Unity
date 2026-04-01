@@ -9,7 +9,7 @@ namespace LcLTools
         public Transform renderTrans;
         public Cubemap cubemap;
 
-        [MenuItem("LcLTools/CreateCubemap")]
+        [MenuItem("LcLTools/纹理工具/CreateCubemap")]
         static void CreateCubemap()
         {
             //"Create Cubemap"是打开的窗口名，"Create"是按钮名，点击时调用OnWizardCreate()方法

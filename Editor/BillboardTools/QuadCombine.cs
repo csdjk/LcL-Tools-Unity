@@ -6,7 +6,7 @@ using UnityEngine;
 
 public class QuadCombine : EditorWindow
 {
-    [MenuItem("LcLTools/QuadCombine")]
+    [MenuItem("LcLTools/纹理工具/QuadCombine")]
     public static void OpenWindow()
     {
         GetWindow<QuadCombine>().Show();

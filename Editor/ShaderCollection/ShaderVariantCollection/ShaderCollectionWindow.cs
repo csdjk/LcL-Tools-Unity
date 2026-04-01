@@ -94,7 +94,7 @@ namespace LcLTools
         public static ShaderCollectionWindow Instance;
 
 
-        [MenuItem("LcLTools/Shader变体收集")]
+        [MenuItem("LcLTools/Shader 工具/Shader变体收集")]
         private static void ShowWindow()
         {
             Instance = GetWindow<ShaderCollectionWindow>();

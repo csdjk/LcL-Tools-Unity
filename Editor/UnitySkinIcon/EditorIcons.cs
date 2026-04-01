@@ -12,7 +12,7 @@ namespace LcLTools
     // https://github.com/nukadelic/UnityEditorIcons
     public class EditorIcons : EditorWindow
     {
-        [MenuItem("LcLTools/UnitySkinIcon/Editor Icons")]
+        [MenuItem("LcLTools/编辑器皮肤/Editor Icons")]
         public static void EditorIconsOpen()
         {
 #if UNITY_2018
