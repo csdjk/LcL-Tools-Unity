@@ -135,12 +135,14 @@ Shader "LcL/ShaderGUI/LcLShaderGUI2"
                 "LightMode" = "UniversalForward"
             }
 
+
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
             #include "UnityCG.cginc"
 
-            #pragma multi_compile _ _TEST
+            #pragma multi_compile _ _SWITCH
+            #pragma shader_feature _ _Test
 
             struct appdata
             {
