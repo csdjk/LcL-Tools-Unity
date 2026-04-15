@@ -34,6 +34,7 @@ namespace LcLTools
         private List<string> m_FoundPrefabs = new List<string>();
         private bool m_NeedRefresh = true;
 
+
         // ── 样式 ──────────────────────────────────────────────
         private GUIStyle m_HeaderStyle;
         private GUIStyle m_BoxStyle;
@@ -329,6 +330,11 @@ namespace LcLTools
 
                 Undo.RegisterCreatedObjectUndo(instance, "Effect Preview - Spawn");
             }
+
+            // 挂载 EffectPreviewPlayer，由组件自身负责驱动粒子模拟（场景切换后自动恢复）
+            var player = groupGo.AddComponent<EffectPreviewPlayer>();
+            player.CollectRootPS();
+            player.PlayAll();
 
             // 在 Hierarchy 中选中并展开组对象
             Selection.activeGameObject = groupGo;
