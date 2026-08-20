@@ -1,0 +1,13 @@
+{
+  "name": "SpineSheetBaker",
+  "references": [
+    "spine-csharp",
+    "spine-unity",
+    "spine-unity-editor",
+    "UnityEngine.UI"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": true
+}
