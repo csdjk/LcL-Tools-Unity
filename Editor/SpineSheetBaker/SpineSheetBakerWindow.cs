@@ -29,7 +29,7 @@ namespace SpineSheetBaker.Editor {
 		double lastPreviewUpdate;
 		SpineSheetBakerPreset preset;
 
-		[MenuItem("Tools/Spine/序列帧图集烘焙器")]
+		[MenuItem("LcLTools/Spine/序列帧图集烘焙器")]
 		public static SpineSheetBakerWindow Open () {
 			SpineSheetBakerWindow window = GetWindow<SpineSheetBakerWindow>();
 			window.titleContent = new GUIContent("Spine 图集烘焙");
@@ -38,10 +38,10 @@ namespace SpineSheetBaker.Editor {
 			return window;
 		}
 
-		[MenuItem("Assets/Spine/用序列帧图集烘焙", true)]
+		[MenuItem("Assets/LcLTools/用序列帧图集烘焙", true)]
 		static bool ValidateOpenFromAsset () => Selection.activeObject is SkeletonDataAsset;
 
-		[MenuItem("Assets/Spine/用序列帧图集烘焙", false, 2000)]
+		[MenuItem("Assets/LcLTools/用序列帧图集烘焙", false, 2000)]
 		static void OpenFromAsset () {
 			SpineSheetBakerWindow window = Open();
 			window.SetSource(Selection.activeObject as SkeletonDataAsset);
